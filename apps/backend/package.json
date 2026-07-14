@@ -11,7 +11,8 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/core/migrate.ts"
+    "db:migrate": "tsx src/db/core/migrate.ts",
+    "db:seed-demo": "tsx src/db/seed-demo-tenant.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.2.2",

@@ -12,15 +12,18 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/core/migrate.ts",
-    "db:seed-demo": "tsx src/db/seed-demo-tenant.ts"
+    "db:seed-demo": "tsx src/db/seed-demo-tenant.ts",
+    "db:seed-auth": "tsx src/db/seed-auth.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.2.2",
     "@fastify/swagger": "^9.4.0",
     "@fastify/swagger-ui": "^5.2.0",
+    "@node-rs/argon2": "^2",
     "@wz/shared": "workspace:*",
     "drizzle-orm": "^0.38.3",
     "fastify": "^5.2.0",
+    "jose": "^5",
     "pg": "^8.13.1",
     "pino": "^9.5.0",
     "zod": "^3.24.1"

@@ -9,7 +9,13 @@ export default defineConfig({
       provider: 'istanbul',
       // Cobertura medida só nos módulos unit-testáveis (funções puras / services
       // sem dependência de DB/HTTP), conforme a lei de cobertura do projeto.
-      include: ['src/config/**', 'src/services/**', 'src/lib/**', 'src/tenancy/**'],
+      include: [
+        'src/config/**',
+        'src/services/**',
+        'src/lib/**',
+        'src/tenancy/**',
+        'src/core/auth/**',
+      ],
       // Excluídos: bootstrap de I/O e adaptadores de infra (pg/drizzle/http),
       // cobertos por testes de integração, não unitários.
       exclude: [
@@ -17,6 +23,9 @@ export default defineConfig({
         'src/config/load-dotenv.ts',
         'src/tenancy/tenant-connection.factory.ts',
         'src/tenancy/create-tenant-resolver.ts',
+        'src/core/auth/user.repository.ts',
+        'src/core/auth/signing-key.repository.ts',
+        'src/core/auth/create-auth.ts',
       ],
       thresholds: {
         lines: 85,

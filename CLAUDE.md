@@ -82,9 +82,24 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
 ## Estado atual
 
 - **Fase 0 concluída** (2026-07-14): scaffold do monorepo, git flow, CI, Docker, schema+migração
-  do CORE (9 tabelas, verificada em Postgres real), endpoint `/health`. 100% de cobertura.
-- **Próximo — Fase 1**: resolução de tenant por subdomínio + `TenantConnectionRegistry` +
-  contexto via `AsyncLocalStorage`. Ver roadmap em `docs/ARQUITETURA.md` §14.
+  do CORE (9 tabelas, verificada em Postgres real), endpoint `/health`.
+- **Fase 1 concluída** (2026-07-14, em `develop`): resolução de tenant por subdomínio (hook
+  Fastify), `TenantConnectionRegistry` (Object Pool + LRU), contexto via `AsyncLocalStorage`
+  (padrão `runTenantScope(done)` + store mutável, pois `enterWith` não atravessa a fronteira do
+  hook), cifra de credenciais AES-256-GCM (ADR-006) e `TenantResolver` com cache TTL. E2E
+  verificado: `GET /tenant/info` com `Host: demo.localhost` lê o banco isolado `wz_tenant_demo`.
+  57 testes no backend. Seed de dev: `pnpm --filter @wz/backend db:seed-demo`.
+- **Próximo — Fase 2**: autenticação global (Argon2 + JWT RS256/JWKS + sessão única — ADR-008).
+  Ver roadmap em `docs/ARQUITETURA.md` §14.
+
+### Convenções de tenancy (Fase 1)
+
+- Acesso ao banco do tenant nos handlers: `getTenantDb()` de `tenancy/tenant-context` (nunca
+  passar conexão por parâmetro).
+- Rotas de plataforma (sem tenant) devem ser isentas via `isExempt` no `registerTenantResolution`.
+- Módulos com I/O real (`*.factory.ts`, `create-tenant-resolver.ts`, repositórios, rotas) ficam
+  fora da medição de cobertura; a lógica (crypto, subdomain, context, registry, resolver) é
+  100% testada.
 
 ## Particularidades do ambiente (máquina de dev)
 

@@ -89,8 +89,14 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   hook), cifra de credenciais AES-256-GCM (ADR-006) e `TenantResolver` com cache TTL. E2E
   verificado: `GET /tenant/info` com `Host: demo.localhost` lê o banco isolado `wz_tenant_demo`.
   57 testes no backend. Seed de dev: `pnpm --filter @wz/backend db:seed-demo`.
-- **Próximo — Fase 2**: autenticação global (Argon2 + JWT RS256/JWKS + sessão única — ADR-008).
-  Ver roadmap em `docs/ARQUITETURA.md` §14.
+- **Fase 2 concluída** (2026-07-14, em `develop`): autenticação global — Argon2
+  (`@node-rs/argon2`), JWT RS256 + JWKS (`jose`), lockout (5→15min), sessão única (`sid` no
+  token vs `sessao_ativa_id`). Rotas: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`,
+  `GET /.well-known/jwks.json` (isentas de tenant). Login E2E verificado (login, me, jwks, senha
+  errada, invalidação da sessão anterior). Seed: `pnpm --filter @wz/backend db:seed-auth`
+  (admin `admin@wzconnect.com` / `Admin@1234` + signing key). 84 testes no backend.
+- **Próximo — Fase 3**: licenciamento (products, plans, subscriptions, entitlements) +
+  claims `tnt`/`roles`/`mods` no token e binding subdomínio×tnt. Ver `docs/ARQUITETURA.md` §14.
 
 ### Convenções de tenancy (Fase 1)
 

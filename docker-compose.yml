@@ -1,0 +1,68 @@
+name: wz-connect
+
+services:
+  postgres-core:
+    image: postgres:16-alpine
+    container_name: wz-connect-postgres-core
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wz_connect}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wz_connect}
+      POSTGRES_DB: ${POSTGRES_DB:-wz_connect_core}
+    ports:
+      # Publicado em 5435 no host (5432-5434 já usados por outros projetos WZ locais).
+      - '5435:5432'
+    volumes:
+      - postgres_core_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-wz_connect} -d ${POSTGRES_DB:-wz_connect_core}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: wz-connect-backend
+    restart: unless-stopped
+    depends_on:
+      postgres-core:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: '3000'
+      HOST: 0.0.0.0
+      CORE_DATABASE_URL: postgres://${POSTGRES_USER:-wz_connect}:${POSTGRES_PASSWORD:-wz_connect}@postgres-core:5432/${POSTGRES_DB:-wz_connect_core}
+      JWT_SECRET: ${JWT_SECRET}
+      TENANT_CREDENTIALS_KEK: ${TENANT_CREDENTIALS_KEK}
+    expose:
+      - '3000'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: wz-connect-frontend
+    restart: unless-stopped
+    expose:
+      - '80'
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: wz-connect-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - '8080:80'
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_core_data:

@@ -6,15 +6,20 @@ import { checkCoreDb } from './db/core/health-check.js';
 import { createTenantResolver } from './tenancy/create-tenant-resolver.js';
 import { registerTenantResolution } from './tenancy/tenant-resolution.plugin.js';
 import { registerTenantInfoRoute } from './routes/tenant-info.route.js';
+import { createAuthModule } from './core/auth/create-auth.js';
+import { registerAuthRoutes } from './routes/auth.routes.js';
 
 // Versão do serviço (injetada pelo pnpm em runtime; fallback para dev/docker).
 const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
 
-// Rotas de plataforma isentas de resolução de tenant.
-const EXEMPT_PREFIXES = ['/health', '/'];
+// Issuer dos tokens (estável entre assinatura e verificação).
+const JWT_ISSUER = process.env.JWT_ISSUER ?? 'wz-connect';
+
+// Rotas de plataforma isentas de resolução de tenant (auth global, health, JWKS).
+const EXEMPT_PREFIXES = ['/health', '/auth', '/.well-known'];
 const isExempt = (url: string): boolean => {
   const path = url.split('?')[0] ?? url;
-  return path === '/' || EXEMPT_PREFIXES.some((p) => p !== '/' && path.startsWith(p));
+  return path === '/' || EXEMPT_PREFIXES.some((p) => path.startsWith(p));
 };
 
 async function main(): Promise<void> {
@@ -37,6 +42,17 @@ async function main(): Promise<void> {
     isExempt,
   });
   registerTenantInfoRoute(app);
+
+  // Fase 2: autenticação global (login, /auth/me, logout, JWKS).
+  try {
+    const auth = await createAuthModule(coreDb, {
+      kek: cfg.tenantCredentialsKek,
+      issuer: JWT_ISSUER,
+    });
+    registerAuthRoutes(app, auth);
+  } catch (err) {
+    app.log.warn(`Auth desabilitado: ${(err as Error).message}`);
+  }
 
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info(`Recebido ${signal}, encerrando...`);

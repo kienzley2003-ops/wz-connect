@@ -14,6 +14,8 @@ import { getTenantEntitlements } from './core/licensing/licensing.repository.js'
 import { extractSubdomain } from './tenancy/subdomain.js';
 import { createModulesRegistry } from './modules/index.js';
 import { registerModules } from './modules/register-modules.js';
+import { registerTenantsRoutes } from './routes/tenants.routes.js';
+import { createProvisioningDeps } from './provisioning/create-provisioning.js';
 
 // Versão do serviço (injetada pelo pnpm em runtime; fallback para dev/docker).
 const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
@@ -21,8 +23,8 @@ const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
 // Issuer dos tokens (estável entre assinatura e verificação).
 const JWT_ISSUER = process.env.JWT_ISSUER ?? 'wz-connect';
 
-// Rotas de plataforma isentas de resolução de tenant (auth global, health, JWKS).
-const EXEMPT_PREFIXES = ['/health', '/auth', '/.well-known'];
+// Rotas de plataforma isentas de resolução de tenant (auth global, health, JWKS, tenants).
+const EXEMPT_PREFIXES = ['/health', '/auth', '/.well-known', '/tenants'];
 const isExempt = (url: string): boolean => {
   const path = url.split('?')[0] ?? url;
   return path === '/' || EXEMPT_PREFIXES.some((p) => path.startsWith(p));
@@ -76,6 +78,16 @@ async function main(): Promise<void> {
     const modulesRegistry = createModulesRegistry();
     registerModules(app, { registry: modulesRegistry, guard });
     app.log.info(`Módulos carregados: ${modulesRegistry.keys().join(', ')}`);
+
+    // Fase 4: gestão e provisionamento de tenants (plataforma).
+    registerTenantsRoutes(app, {
+      guard,
+      coreDb,
+      provisioning: createProvisioningDeps(coreDb, {
+        kek: cfg.tenantCredentialsKek,
+        coreDatabaseUrl: cfg.coreDatabaseUrl,
+      }),
+    });
   } catch (err) {
     app.log.warn(`Auth desabilitado: ${(err as Error).message}`);
   }

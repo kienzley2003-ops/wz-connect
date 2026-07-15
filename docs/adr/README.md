@@ -17,6 +17,7 @@ novo ADR que **supersede** o anterior.
 | [ADR-010](ADR-010-tdd-gitflow.md)               | TDD, cobertura 85%, commit atômico e git flow                              | Aceito |
 | [ADR-011](ADR-011-connect-sdk.md)               | Integração de produtos via `@wz/connect-sdk` (Adapter)                     | Aceito |
 | [ADR-012](ADR-012-pooling-resiliencia.md)       | Estratégia de pooling e resiliência (PgBouncer + circuit breaker)          | Aceito |
+| [ADR-013](ADR-013-bi-ingestao.md)               | Ingestão de BI por push (snapshots de janela + CQRS-lite)                  | Aceito |
 
 ## Formato
 

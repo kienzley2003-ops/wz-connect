@@ -17,6 +17,7 @@ export default defineConfig({
         'src/core/auth/**',
         'src/core/licensing/**',
         'src/modules/**',
+        'src/provisioning/**',
       ],
       // Excluídos: bootstrap de I/O e adaptadores de infra (pg/drizzle/http),
       // cobertos por testes de integração, não unitários.
@@ -33,6 +34,10 @@ export default defineConfig({
         'src/modules/masterfila/**',
         'src/modules/agenda/**',
         'src/modules/index.ts',
+        // Provisionamento: I/O real (pg admin, migrator, seed) e composição.
+        'src/provisioning/database-admin.ts',
+        'src/provisioning/tenant-db.io.ts',
+        'src/provisioning/create-provisioning.ts',
       ],
       thresholds: {
         lines: 85,

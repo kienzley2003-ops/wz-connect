@@ -109,10 +109,29 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   no frontend (`buildNavItems` + `ModuleNav`, filtrando o catálogo compartilhado pelo claim
   `mods`). E2E verificado por API **e no navegador** (login em `demo.localhost:3001` → nav
   mostra só MasterFila). 119 testes no backend, 8 no frontend, 7 no shared.
-- **Próximo — Fase 4**: provisionamento (`tenant-migrator`, `POST /tenants/:id/provisionar`,
-  `db_placement`). Depois: Fase 5 (MasterFila via `@wz/connect-sdk`) e Fase 6 (BI por push).
-  **Sempre conferir a coluna Status em `docs/ARQUITETURA.md` §14 antes de anunciar a próxima
-  fase** (fonte da verdade — já errei isso uma vez).
+- **Fase 4 concluída** (2026-07-14, em `develop`): provisionamento fim-a-fim — schema/migrações
+  **do banco de tenant** (`drizzle/tenant`, `tenant_info`), `tenantDatabaseName` (valida o slug
+  antes do `CREATE DATABASE`, que não aceita parâmetros), `PlacementRegistry` (Strategy do
+  `db_placement`), `provisionTenant` (cria banco → migra → seed → credenciais cifradas → ativa)
+  e `migrateAllTenants` (resiliente). Rotas: `POST /tenants`, `GET /tenants/:id`,
+  `POST /tenants/:id/provisionar`. CLI: `pnpm --filter @wz/backend db:migrate-tenants`.
+  E2E verificado: tenant `acme` criado do zero → banco `wz_tenant_acme` + `tenant_info` seedado
+  → status `ativo` → resolve em `acme.localhost`; reprovisionar → 409. 158 testes no backend.
+- **Próximo — Fase 5**: 1º módulo de produto (MasterFila via `@wz/connect-sdk`, ADR-011).
+  Depois: Fase 6 (BI por push + dashboard). **Sempre conferir a coluna Status em
+  `docs/ARQUITETURA.md` §14 antes de anunciar a próxima fase** (fonte da verdade — já errei
+  isso uma vez).
+
+### Convenções de provisionamento (Fase 4)
+
+- **Dois conjuntos de migração**: CORE (`drizzle/core`, `db:migrate`) e tenant
+  (`drizzle/tenant`, `db:migrate-tenants`). Gerar com `db:generate` e `db:generate-tenant`.
+- Tabelas novas de módulo vão no **schema de tenant** (`src/db/tenant/schema.ts`) — schema
+  combinado por tenant, evitando ordenação entre módulos.
+- **Nunca** interpolar nome de banco sem passar por `tenantDatabaseName()` (CREATE DATABASE não
+  aceita parâmetros ligados).
+- Credenciais e ativação só depois de migrar+seedar: tenant quebrado nunca vira `ativo`.
+- Migração destrutiva: **expand/contract obrigatório** (ADR-009) — roda em N bancos.
 
 ### Convenções de módulos (Fase 3)
 

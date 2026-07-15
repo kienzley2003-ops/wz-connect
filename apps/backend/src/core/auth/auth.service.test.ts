@@ -4,6 +4,7 @@ import {
   InvalidCredentialsError,
   AccountLockedError,
   UserInactiveError,
+  TenantAccessDeniedError,
   type AuthUser,
   type AuthServiceDeps,
 } from './auth.service.js';
@@ -30,6 +31,12 @@ function makeDeps(overrides: Partial<AuthServiceDeps> = {}): AuthServiceDeps {
     signToken: vi.fn(async () => 'signed.jwt.token'),
     newSessionId: vi.fn(() => 'sess-1'),
     now: () => now,
+    resolveTenantScope: vi.fn(async () => ({
+      tenantId: 'tenant-1',
+      subdomain: 'acme',
+      roles: ['org_admin'],
+      mods: ['masterfila'],
+    })),
     ...overrides,
   };
 }
@@ -96,5 +103,36 @@ describe('AuthService.login', () => {
     await expect(new AuthService(deps).login('admin@wz.test', 'senha')).rejects.toBeInstanceOf(
       UserInactiveError,
     );
+  });
+
+  describe('escopo de tenant (Fase 3)', () => {
+    it('sem subdomínio, emite token de plataforma (sem tnt/roles/mods)', async () => {
+      const deps = makeDeps();
+      await new AuthService(deps).login('admin@wz.test', 'senha');
+
+      expect(deps.signToken).toHaveBeenCalledWith({ sub: 'user-1', sid: 'sess-1' });
+      expect(deps.resolveTenantScope).not.toHaveBeenCalled();
+    });
+
+    it('com subdomínio, enriquece o token com tnt, roles e mods', async () => {
+      const deps = makeDeps();
+      await new AuthService(deps).login('admin@wz.test', 'senha', 'acme');
+
+      expect(deps.resolveTenantScope).toHaveBeenCalledWith('user-1', 'acme');
+      expect(deps.signToken).toHaveBeenCalledWith({
+        sub: 'user-1',
+        sid: 'sess-1',
+        tnt: 'acme',
+        roles: ['org_admin'],
+        mods: ['masterfila'],
+      });
+    });
+
+    it('recusa login em tenant onde o usuário não tem membership', async () => {
+      const deps = makeDeps({ resolveTenantScope: vi.fn(async () => null) });
+      await expect(
+        new AuthService(deps).login('admin@wz.test', 'senha', 'outro'),
+      ).rejects.toBeInstanceOf(TenantAccessDeniedError);
+    });
   });
 });

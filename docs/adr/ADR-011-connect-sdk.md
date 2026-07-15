@@ -20,14 +20,39 @@ preserva o investimento existente e permite evolução independente, ao custo de
 O SDK encapsula:
 
 - **Validação de token** (JWT RS256 via JWKS do Connect — ADR-008);
-- **Resolução das credenciais do banco do tenant** (o Connect provisiona o banco e entrega as credenciais; ambos os runtimes usam o **mesmo banco do tenant**, preservando o isolamento físico);
 - **Checagem de módulo/plano/limite** habilitado para a empresa.
+
+> **Emenda (2026-07-14, Fase 5):** a versão original também previa "resolução das
+> credenciais do banco do tenant" pelo SDK, em runtime. **Removido** — ver a emenda
+> "Como o produto acessa o banco do tenant", abaixo.
 
 Migração incremental (sem big-bang, com feature flag):
 
 1. **Coexistência** — Connect existe; MasterFila mantém auth próprio; CORE espelha tenants/usuários.
 2. **Delegação** — MasterFila loga via Connect e obtém credenciais do banco pelo SDK.
 3. **Fonte única** — CRUD de tenants/usuários/planos só no console do Connect.
+
+## Emenda (2026-07-14): como o produto acessa o banco do tenant
+
+A decisão original — "o Connect **entrega as credenciais** ao MasterFila via SDK/API" —
+implicava um **endpoint de credencial de banco em runtime**. Revisto na implementação da Fase 5:
+
+**Decisão:** a credencial é entregue **uma única vez, no provisionamento** (revelada no retorno
+de `POST /tenants/:id/provisionar`), e o operador a guarda no cofre do produto. **Não existe
+endpoint de credencial em runtime**; no CORE ela fica apenas cifrada. Reemissão = rotação
+(`db:harden-tenants`).
+
+Consequências:
+
+- **Superfície menor**: sem endpoint que sirva credencial de banco por HTTP a cada chamada.
+- **Sem M2M**: a razão de existir de service accounts era autenticar esse endpoint. Sem ele, o
+  SDK só precisa do JWKS (público) e do token do próprio usuário — nenhuma credencial
+  máquina-a-máquina foi construída.
+- **Role dedicada por tenant** virou **pré-requisito de segurança**, não refinamento: entregar
+  uma credencial compartilhada daria ao produto acesso a todos os tenants. Cada tenant agora tem
+  a role `wz_app_<slug>`, dona do seu banco, com `CONNECT` revogado do `PUBLIC`.
+- O produto continua falando com o **mesmo banco do tenant** que o Connect, preservando o
+  isolamento físico do ADR-004 — agora também no nível de credencial.
 
 ## Impacto no MasterFila (reescrita aprovada)
 

@@ -15,6 +15,13 @@
       "when": 1784117189321,
       "tag": "0001_curvy_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784119252863,
+      "tag": "0002_harden_core_connect",
+      "breakpoints": true
     }
   ]
 }

@@ -14,6 +14,7 @@
     "db:generate-tenant": "drizzle-kit generate --config drizzle.tenant.config.ts",
     "db:migrate": "tsx src/db/core/migrate.ts",
     "db:migrate-tenants": "tsx src/db/migrate-tenants.ts",
+    "db:harden-tenants": "tsx src/db/harden-tenants.ts",
     "db:seed-demo": "tsx src/db/seed-demo-tenant.ts",
     "db:seed-auth": "tsx src/db/seed-auth.ts",
     "db:seed-licensing": "tsx src/db/seed-licensing.ts"

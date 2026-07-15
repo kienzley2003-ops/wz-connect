@@ -6,7 +6,8 @@ import {
   activateTenant,
 } from '../core/tenants/tenant.repository.js';
 import { PlacementRegistry, placementFromUrl } from './placement.js';
-import { createDatabase } from './database-admin.js';
+import { createDatabase, ensureTenantRole } from './database-admin.js';
+import { generateDatabasePassword } from './tenant-role.js';
 import { migrateTenantDatabase, seedTenantDatabase } from './tenant-db.io.js';
 import type { ProvisioningDeps } from './provisioning.service.js';
 
@@ -33,6 +34,8 @@ export function createProvisioningDeps(
     findTenant: (id) => findTenantById(coreDb, id),
     resolvePlacement: (name) => placements.get(name),
     createDatabase,
+    generatePassword: () => generateDatabasePassword(),
+    ensureRole: ensureTenantRole,
     migrateTenantDb: migrateTenantDatabase,
     seedTenantDb: seedTenantDatabase,
     encrypt: (plain) => encryptCredential(plain, options.kek),

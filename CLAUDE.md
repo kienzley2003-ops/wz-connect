@@ -125,10 +125,37 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   `/api/v1/docs` (as deps existiam desde a Fase 0 sem uso). Seeds: admin vira
   `platform_super_admin`; `operador@wzconnect.com`/`Operador@1234` é usuário comum (sem `prole`).
   171 testes no backend. **Sem TODOs pendentes no código.**
-- **Próximo — Fase 5**: 1º módulo de produto (MasterFila via `@wz/connect-sdk`, ADR-011).
+- **Fase 5 — lado do Connect concluído** (2026-07-14, em `develop`, branch `feature/connect-sdk`):
+  - **`@wz/connect-sdk`** (novo pacote): verificação RS256 com cache de JWKS (rebusca em `kid`
+    desconhecido = rotação, com cooldown anti-DoS), `hasModule`/`requireModule` offline pelo
+    claim `mods`, e `checkEntitlement` fresco usando o **token do próprio usuário**.
+    **Sem credencial M2M** — não foi construída porque a decisão de acesso ao banco a tornou
+    desnecessária (ver emenda no ADR-011).
+  - **Role de banco dedicada por tenant** (`wz_app_<slug>`), dona do banco, com `CONNECT`
+    revogado do `PUBLIC` — e o CORE idem (migração `0002`). **Isolamento provado por E2E**:
+    a credencial de um tenant é negada nos outros e no CORE.
+  - **Credencial revelada só no provisionamento** (`POST /tenants/:id/provisionar`); não há
+    endpoint de credencial em runtime. Rotação/remediação: `db:harden-tenants`.
+  - `modules/masterfila` reposicionado como **console** do produto (as rotas de negócio ficam
+    no app separado). 183 testes no backend, 26 no SDK.
+- **Próximo — Fase 5 (resto)**: integrar o repo `wz-masterfila` (auth delegada via SDK, conexão
+  dinâmica, remoção do `organizacao_id` via expand/contract, split do banco único). Depois:
+  Fase 6 (BI por push + dashboard).
   Depois: Fase 6 (BI por push + dashboard). **Sempre conferir a coluna Status em
   `docs/ARQUITETURA.md` §14 antes de anunciar a próxima fase** (fonte da verdade — já errei
   isso uma vez).
+
+### Convenções de segurança de banco (Fase 5)
+
+- **Cada tenant tem role própria** (`wz_app_<slug>`), dona do seu banco. A app e os produtos
+  conectam com ela — **nunca** com o superusuário.
+- **`REVOKE CONNECT ... FROM PUBLIC` é obrigatório** em todo banco novo: o PostgreSQL dá
+  `CONNECT` ao `PUBLIC` por padrão, então **ser dono não isola**. Isso foi um vazamento real,
+  pego por E2E. Ao criar banco fora do `provisionTenant`, replicar o revoke.
+- Credencial de tenant é revelada **uma vez** (retorno do provisionamento). Não criar endpoint
+  que sirva credencial em runtime — foi decisão explícita (emenda do ADR-011).
+- Nome de role/banco e senha entram em DDL (sem bind): usar sempre `tenantRoleName()`,
+  `tenantDatabaseName()` e `generateDatabasePassword()` (base64url, sem aspas).
 
 ### Convenções de segurança
 

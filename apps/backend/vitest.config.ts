@@ -16,6 +16,7 @@ export default defineConfig({
         'src/tenancy/**',
         'src/core/auth/**',
         'src/core/licensing/**',
+        'src/modules/**',
       ],
       // Excluídos: bootstrap de I/O e adaptadores de infra (pg/drizzle/http),
       // cobertos por testes de integração, não unitários.
@@ -28,6 +29,10 @@ export default defineConfig({
         'src/core/auth/signing-key.repository.ts',
         'src/core/auth/create-auth.ts',
         'src/core/licensing/licensing.repository.ts',
+        // Módulos de produto (I/O no banco do tenant) e composição do registry.
+        'src/modules/masterfila/**',
+        'src/modules/agenda/**',
+        'src/modules/index.ts',
       ],
       thresholds: {
         lines: 85,

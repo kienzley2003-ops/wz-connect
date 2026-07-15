@@ -10,6 +10,4 @@ export type OrgRole = (typeof ORG_ROLES)[number];
 export const TENANT_STATUS = ['provisionando', 'ativo', 'suspenso', 'encerrado'] as const;
 export type TenantStatus = (typeof TENANT_STATUS)[number];
 
-/** Chaves de módulos de produto conhecidos. */
-export const MODULE_KEYS = ['masterfila'] as const;
-export type ModuleKey = (typeof MODULE_KEYS)[number];
+// O catálogo de módulos vive em `./modules.ts` (fonte única).

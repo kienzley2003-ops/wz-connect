@@ -12,6 +12,8 @@ import { registerAuthRoutes } from './routes/auth.routes.js';
 import { registerLicensingRoutes } from './routes/licensing.routes.js';
 import { getTenantEntitlements } from './core/licensing/licensing.repository.js';
 import { extractSubdomain } from './tenancy/subdomain.js';
+import { createModulesRegistry } from './modules/index.js';
+import { registerModules } from './modules/register-modules.js';
 
 // Versão do serviço (injetada pelo pnpm em runtime; fallback para dev/docker).
 const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
@@ -69,6 +71,11 @@ async function main(): Promise<void> {
       guard,
       getTenantEntitlements: (subdomain) => getTenantEntitlements(coreDb, subdomain),
     });
+
+    // Fase 3: módulos plugáveis sob /modules/<key>, com guard de módulo.
+    const modulesRegistry = createModulesRegistry();
+    registerModules(app, { registry: modulesRegistry, guard });
+    app.log.info(`Módulos carregados: ${modulesRegistry.keys().join(', ')}`);
   } catch (err) {
     app.log.warn(`Auth desabilitado: ${(err as Error).message}`);
   }

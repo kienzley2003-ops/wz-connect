@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { checkEntitlement, type Entitlements } from '../core/licensing/entitlements.js';
-import { createModuleGuard } from '../core/licensing/module.guard.js';
 
 export interface LicensingRoutesDeps {
   readonly guard: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
@@ -43,16 +42,4 @@ export function registerLicensingRoutes(app: FastifyInstance, deps: LicensingRou
     const body = (request.body ?? {}) as { module?: string; feature?: string; usage?: number };
     return checkEntitlement(entitlements, body);
   });
-
-  // Rotas de demonstração (Fase 3): provam o guard de módulo do ADR-007.
-  app.get(
-    '/modules/masterfila/ping',
-    { preHandler: [deps.guard, createModuleGuard('masterfila')] },
-    async () => ({ module: 'masterfila', ok: true }),
-  );
-  app.get(
-    '/modules/agenda/ping',
-    { preHandler: [deps.guard, createModuleGuard('agenda')] },
-    async () => ({ module: 'agenda', ok: true }),
-  );
 }

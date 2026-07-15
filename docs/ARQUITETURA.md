@@ -74,7 +74,7 @@ Verificadas em CI a cada commit:
 
 ## 3. Stack Técnica
 
-- **Backend:** Node.js 20 LTS, **Fastify 5.x**, **Drizzle ORM**, PostgreSQL 16, `@fastify/jwt` + `jose` (JWKS/JWS), `@fastify/rate-limit`, `@fastify/swagger`, `@fastify/autoload` (plugins de módulo), `pino` (log estruturado), Argon2.
+- **Backend:** Node.js 20 LTS, **Fastify 5.x**, **Drizzle ORM**, PostgreSQL 16, `@fastify/jwt` + `jose` (JWKS/JWS), `@fastify/rate-limit`, `@fastify/swagger`, `pino` (log estruturado), Argon2 (`@node-rs/argon2`).
 - **Frontend:** React 19, TypeScript 5, Vite 6, TailwindCSS 4, React Router 7.
 - **Shared:** TypeScript puro — tipos, contratos (schemas Zod), constantes de módulos/planos.
 - **Infra:** Docker Compose (postgres-core, backend, frontend, nginx). Bancos de tenant podem viver em instâncias/servidores Postgres distintos.
@@ -232,7 +232,7 @@ Autorização resolvida por um `AuthorizationService` único (padrão Policy —
 
 ## 7. Sistema de Módulos (Plugins Fastify encapsulados)
 
-- Cada produto é um **plugin Fastify** carregado via `@fastify/autoload`; o **encapsulamento** do Fastify isola o escopo (hooks, decorators e error handlers do módulo não vazam para os outros).
+- Cada produto é um **plugin Fastify** registrado explicitamente no `ModulesRegistry` (ver emenda no ADR-007); o **encapsulamento** do Fastify isola o escopo (hooks, decorators e error handlers do módulo não vazam para os outros).
 - Um `ModulesRegistry` cruza os módulos habilitados do tenant (`tenant_modules` no CORE) com os plugins carregados, e um **hook `preHandler`** bloqueia acesso a módulo não contratado (`403 module_not_enabled`).
 - O frontend consulta os módulos habilitados e monta a navegação dinamicamente (shell + telas por módulo).
 - Contrato de um módulo (interface comum — padrão Adapter): `key`, `schema` (Drizzle), `migrations`, `plugin` (rotas Fastify), `seed?`.
@@ -317,7 +317,7 @@ GET                 /auditoria
 | **Strategy**                     | `db_placement` / provisionadores    | Escolhe em qual servidor Postgres o banco do tenant nasce (padrão vs dedicado enterprise). |
 | **Repository**                   | acesso a dados (Drizzle)            | Isola domínio do ORM; testável com fakes.                                                  |
 | **Adapter**                      | contrato de módulo                  | Todos os módulos expõem a mesma interface (schema, migrations, rotas).                     |
-| **Plugin encapsulado (Fastify)** | `modules/*`                         | Módulos plugáveis carregados via autoload, escopo isolado por tenant.                      |
+| **Plugin encapsulado (Fastify)** | `modules/*`                         | Módulos plugáveis registrados via `ModulesRegistry`, escopo isolado.                       |
 | **Factory**                      | JWT / chaves de assinatura          | Centraliza construção de tokens e chaves.                                                  |
 | **Policy**                       | `AuthorizationService`              | Regra de autorização única (DRY).                                                          |
 
@@ -368,7 +368,7 @@ Ponto crítico da arquitetura — há **dois conjuntos** de migração:
 | **0 — Fundação**             | Esqueleto do repo           | Monorepo pnpm, Fastify, git flow, CI (lint+test+coverage 85%), Docker Compose (postgres-core), schema+migração do CORE, health check | CI verde                                        | ✅ concluída (2026-07-14)                                                                                                                   |
 | **1 — Tenancy core**         | Resolução dinâmica de banco | Hook de subdomínio, `TenantConnectionRegistry`, `TenantContext`, cifra de credenciais, 1º banco de tenant conectando                 | Request resolve tenant e lê banco isolado (E2E) | ✅ concluída (2026-07-14)                                                                                                                   |
 | **2 — Auth global**          | Login e sessão              | Argon2, lockout, JWT RS256+JWKS, sessão única, guards                                                                                | Cobertura ≥85%, login E2E                       | ✅ concluída (2026-07-14)                                                                                                                   |
-| **3 — Sistema de módulos**   | Módulos plugáveis           | `ModulesRegistry`, autoload de plugins, guard `module_not_enabled`, navegação dinâmica no frontend                                   | Módulo habilita/desabilita por tenant           | 🟡 **parcial**: guard + habilitação por tenant ✅ (gate atingido); falta `ModulesRegistry`/autoload e navegação dinâmica                    |
+| **3 — Sistema de módulos**   | Módulos plugáveis           | `ModulesRegistry`, registro de plugins encapsulados, guard `module_not_enabled`, navegação dinâmica no frontend                      | Módulo habilita/desabilita por tenant           | ✅ concluída (2026-07-14)                                                                                                                   |
 | **4 — Provisionamento**      | Criar tenant fim-a-fim      | `tenant-migrator`, `POST /provisionar` (cria banco+migra+seed), `db_placement` (Strategy)                                            | Novo tenant provisionado do zero                | ⬜ pendente                                                                                                                                 |
 | **5 — 1º módulo de produto** | Valor real                  | MasterFila como módulo (ou integração — §9), operando no banco do tenant                                                             | Módulo funcional isolado por tenant             | ⬜ pendente                                                                                                                                 |
 | **6 — Licenciamento & BI**   | Planos e painel             | Planos/limites, painel consolidado (BI por push dos módulos)                                                                         | Entitlement barra feature; dashboard com dados  | 🟡 **parcial**: licenciamento ✅ adiantado (planos/limites, entitlements, claims `tnt`/`roles`/`mods`, binding subdomínio×tnt); BI pendente |

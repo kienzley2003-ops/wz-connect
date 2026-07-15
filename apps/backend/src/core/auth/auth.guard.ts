@@ -17,6 +17,8 @@ declare module 'fastify' {
     authUser?: {
       id: string;
       sid: string;
+      /** Papel de plataforma (ausente para usuário comum). */
+      prole?: string;
       /** Subdomínio do tenant do token (ausente em token de plataforma). */
       tnt?: string;
       roles: string[];
@@ -62,6 +64,7 @@ export function createAuthGuard(deps: AuthGuardDeps) {
     request.authUser = {
       id: claims.sub,
       sid: claims.sid,
+      ...(claims.prole !== undefined ? { prole: claims.prole } : {}),
       ...(claims.tnt !== undefined ? { tnt: claims.tnt } : {}),
       roles: claims.roles ?? [],
       mods: claims.mods ?? [],

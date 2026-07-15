@@ -62,6 +62,8 @@ export function registerAuthRoutes(
     return {
       ...profile,
       tenant: authUser.tnt ?? null,
+      // O console usa o papel de plataforma para decidir se mostra a administração.
+      platformRole: authUser.prole ?? null,
       roles: authUser.roles,
       mods: authUser.mods,
     };

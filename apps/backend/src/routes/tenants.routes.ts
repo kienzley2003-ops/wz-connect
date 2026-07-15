@@ -1,6 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { CoreDb } from '../db/core/client.js';
-import { createTenant, findTenantById } from '../core/tenants/tenant.repository.js';
+import { createTenant, findTenantById, listTenants } from '../core/tenants/tenant.repository.js';
+import {
+  listModuleCatalog,
+  listTenantModules,
+  setTenantModules,
+} from '../core/licensing/licensing.repository.js';
+import { UnknownModuleError } from '../core/licensing/module-diff.js';
 import { isSafeSlug } from '../provisioning/tenant-database-name.js';
 import { createPlatformGuard } from '../core/auth/platform.guard.js';
 import { UnknownPlacementError } from '../provisioning/placement.js';
@@ -47,11 +53,46 @@ export function registerTenantsRoutes(app: FastifyInstance, deps: TenantsRoutesD
     return reply.code(201).send(tenant);
   });
 
+  /** Lista as empresas com os módulos habilitados de cada uma (console). */
+  app.get('/tenants', { preHandler: onlyPlatformAdmin }, async () => {
+    const tenants = await listTenants(deps.coreDb);
+    return Promise.all(
+      tenants.map(async (t) => ({ ...t, modules: await listTenantModules(deps.coreDb, t.id) })),
+    );
+  });
+
+  /** Catálogo de módulos disponíveis para contratar. */
+  app.get('/modules', { preHandler: onlyPlatformAdmin }, async () => {
+    return listModuleCatalog(deps.coreDb);
+  });
+
   app.get('/tenants/:id', { preHandler: onlyPlatformAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenant = await findTenantById(deps.coreDb, id);
     if (!tenant) return reply.code(404).send({ error: 'tenant_not_found' });
-    return tenant;
+    return { ...tenant, modules: await listTenantModules(deps.coreDb, id) };
+  });
+
+  /** Define quais módulos a empresa tem contratados (habilita/desabilita). */
+  app.put('/tenants/:id/modules', { preHandler: onlyPlatformAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { modules?: unknown } | undefined;
+    if (!Array.isArray(body?.modules) || body.modules.some((m) => typeof m !== 'string')) {
+      return reply.code(400).send({ error: 'modules_array_required' });
+    }
+
+    const tenant = await findTenantById(deps.coreDb, id);
+    if (!tenant) return reply.code(404).send({ error: 'tenant_not_found' });
+
+    try {
+      const diff = await setTenantModules(deps.coreDb, id, body.modules as string[]);
+      return { modules: await listTenantModules(deps.coreDb, id), ...diff };
+    } catch (err) {
+      if (err instanceof UnknownModuleError) {
+        return reply.code(400).send({ error: 'unknown_module', module: err.moduleKey });
+      }
+      throw err;
+    }
   });
 
   app.post(

@@ -53,6 +53,27 @@ export async function findTenantById(coreDb: CoreDb, id: string): Promise<Tenant
   return row ?? null;
 }
 
+export interface TenantListItem extends TenantRecord {
+  readonly nome: string;
+  readonly criadoEm: Date;
+}
+
+/** Todas as empresas, para o console de administração. */
+export async function listTenants(coreDb: CoreDb): Promise<TenantListItem[]> {
+  return coreDb
+    .select({
+      id: tenants.id,
+      nome: tenants.nome,
+      slug: tenants.slug,
+      subdominio: tenants.subdominio,
+      status: tenants.status,
+      dbPlacement: tenants.dbPlacement,
+      criadoEm: tenants.createdAt,
+    })
+    .from(tenants)
+    .orderBy(tenants.subdominio);
+}
+
 export interface CreateTenantInput {
   readonly nome: string;
   readonly slug: string;

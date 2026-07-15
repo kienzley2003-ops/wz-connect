@@ -15,6 +15,7 @@ export default defineConfig({
         'src/lib/**',
         'src/tenancy/**',
         'src/core/auth/**',
+        'src/core/licensing/**',
       ],
       // Excluídos: bootstrap de I/O e adaptadores de infra (pg/drizzle/http),
       // cobertos por testes de integração, não unitários.
@@ -26,6 +27,7 @@ export default defineConfig({
         'src/core/auth/user.repository.ts',
         'src/core/auth/signing-key.repository.ts',
         'src/core/auth/create-auth.ts',
+        'src/core/licensing/licensing.repository.ts',
       ],
       thresholds: {
         lines: 85,

@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/core/migrate.ts",
     "db:seed-demo": "tsx src/db/seed-demo-tenant.ts",
-    "db:seed-auth": "tsx src/db/seed-auth.ts"
+    "db:seed-auth": "tsx src/db/seed-auth.ts",
+    "db:seed-licensing": "tsx src/db/seed-licensing.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.2.2",

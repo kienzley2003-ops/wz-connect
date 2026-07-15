@@ -6,6 +6,7 @@ import { verifyPassword } from './password.service.js';
 import { signAccessToken, verifyAccessToken, type AccessTokenClaims } from './token.service.js';
 import { buildJwks } from './signing-key.js';
 import { loadSigningKeys } from './signing-key.repository.js';
+import { resolveTenantScope } from '../licensing/licensing.repository.js';
 import {
   findAuthUserByEmail,
   updateAuthState,
@@ -60,6 +61,7 @@ export async function createAuthModule(
       }),
     newSessionId: () => randomUUID(),
     now: () => new Date(),
+    resolveTenantScope: (userId, subdomain) => resolveTenantScope(coreDb, userId, subdomain),
   });
 
   return {

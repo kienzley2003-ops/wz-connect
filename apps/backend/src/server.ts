@@ -7,7 +7,11 @@ import { createTenantResolver } from './tenancy/create-tenant-resolver.js';
 import { registerTenantResolution } from './tenancy/tenant-resolution.plugin.js';
 import { registerTenantInfoRoute } from './routes/tenant-info.route.js';
 import { createAuthModule } from './core/auth/create-auth.js';
+import { createAuthGuard } from './core/auth/auth.guard.js';
 import { registerAuthRoutes } from './routes/auth.routes.js';
+import { registerLicensingRoutes } from './routes/licensing.routes.js';
+import { getTenantEntitlements } from './core/licensing/licensing.repository.js';
+import { extractSubdomain } from './tenancy/subdomain.js';
 
 // Versão do serviço (injetada pelo pnpm em runtime; fallback para dev/docker).
 const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
@@ -43,13 +47,28 @@ async function main(): Promise<void> {
   });
   registerTenantInfoRoute(app);
 
-  // Fase 2: autenticação global (login, /auth/me, logout, JWKS).
+  // Fase 2/3: autenticação global + licenciamento.
   try {
     const auth = await createAuthModule(coreDb, {
       kek: cfg.tenantCredentialsKek,
       issuer: JWT_ISSUER,
     });
-    registerAuthRoutes(app, auth);
+
+    const getSubdomain = (request: { headers: { host?: string } }): string | null =>
+      extractSubdomain(request.headers.host, process.env.BASE_DOMAIN);
+
+    // Guard único: valida JWT + sessão única + binding subdomínio×tnt.
+    const guard = createAuthGuard({
+      verifyToken: auth.verifyToken,
+      getActiveSessionId: auth.getActiveSessionId,
+      getSubdomain,
+    });
+
+    registerAuthRoutes(app, auth, { guard, getSubdomain });
+    registerLicensingRoutes(app, {
+      guard,
+      getTenantEntitlements: (subdomain) => getTenantEntitlements(coreDb, subdomain),
+    });
   } catch (err) {
     app.log.warn(`Auth desabilitado: ${(err as Error).message}`);
   }

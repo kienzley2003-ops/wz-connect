@@ -5,11 +5,23 @@ export interface AuthGuardDeps {
   readonly verifyToken: (token: string) => Promise<AccessTokenClaims>;
   /** Retorna a sessão ativa atual do usuário no CORE (sessão única). */
   readonly getActiveSessionId: (userId: string) => Promise<string | null>;
+  /**
+   * Subdomínio da request, para conferir contra o claim `tnt` (ADR-008).
+   * Quando a request tem subdomínio, o token precisa ser daquele tenant.
+   */
+  readonly getSubdomain?: (request: FastifyRequest) => string | null;
 }
 
 declare module 'fastify' {
   interface FastifyRequest {
-    authUser?: { id: string; sid: string };
+    authUser?: {
+      id: string;
+      sid: string;
+      /** Subdomínio do tenant do token (ausente em token de plataforma). */
+      tnt?: string;
+      roles: string[];
+      mods: string[];
+    };
   }
 }
 
@@ -40,6 +52,19 @@ export function createAuthGuard(deps: AuthGuardDeps) {
       return;
     }
 
-    request.authUser = { id: claims.sub, sid: claims.sid };
+    // Amarra o token ao tenant da request: token de um tenant não vale em outro.
+    const subdomain = deps.getSubdomain?.(request) ?? null;
+    if (subdomain !== null && claims.tnt !== subdomain) {
+      await reply.code(403).send({ error: 'tenant_mismatch' });
+      return;
+    }
+
+    request.authUser = {
+      id: claims.sub,
+      sid: claims.sid,
+      ...(claims.tnt !== undefined ? { tnt: claims.tnt } : {}),
+      roles: claims.roles ?? [],
+      mods: claims.mods ?? [],
+    };
   };
 }

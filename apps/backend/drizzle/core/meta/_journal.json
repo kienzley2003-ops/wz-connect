@@ -8,6 +8,13 @@
       "when": 1784050516770,
       "tag": "0000_glamorous_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784117189321,
+      "tag": "0001_curvy_revanche",
+      "breakpoints": true
     }
   ]
 }

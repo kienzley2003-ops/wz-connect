@@ -1,4 +1,5 @@
 import { tenantDatabaseName } from './tenant-database-name.js';
+import { tenantRoleName } from './tenant-role.js';
 import type { Placement } from './placement.js';
 
 export interface TenantRecord {
@@ -40,6 +41,15 @@ export interface ProvisioningDeps {
     placement: Placement,
     dbName: string,
   ) => Promise<'created' | 'already_exists'>;
+  /** Senha aleatória para a role dedicada do tenant. */
+  readonly generatePassword: () => string;
+  /** Cria/rotaciona a role dedicada e a torna dona do banco do tenant. */
+  readonly ensureRole: (
+    placement: Placement,
+    dbName: string,
+    roleName: string,
+    password: string,
+  ) => Promise<void>;
   readonly migrateTenantDb: (placement: Placement, dbName: string) => Promise<void>;
   readonly seedTenantDb: (
     placement: Placement,
@@ -52,12 +62,31 @@ export interface ProvisioningDeps {
   readonly activateTenant: (tenantId: string) => Promise<void>;
 }
 
+/** Credencial do tenant em texto puro — revelada UMA vez (ver {@link ProvisionResult}). */
+export interface RevealedCredentials {
+  readonly host: string;
+  readonly port: number;
+  readonly database: string;
+  readonly user: string;
+  readonly password: string;
+}
+
 export interface ProvisionResult {
   readonly tenantId: string;
   readonly database: string;
   readonly placement: string;
   /** false quando o banco já existia (re-execução). */
   readonly created: boolean;
+  /**
+   * Credencial da role do tenant em texto puro, **revelada só aqui**.
+   *
+   * É como um produto separado (ex.: MasterFila) recebe acesso ao banco do
+   * tenant: o operador a guarda no cofre do produto no momento do
+   * provisionamento. Não existe endpoint de credencial em runtime — no CORE ela
+   * fica apenas cifrada. Para reemitir, rotacione (novo provisionamento gera
+   * senha nova).
+   */
+  readonly credentials: RevealedCredentials;
 }
 
 /**
@@ -80,20 +109,34 @@ export async function provisionTenant(
     throw new TenantAlreadyActiveError(tenantId);
   }
 
-  // Valida o slug (e o placement) antes de qualquer efeito colateral.
+  // Valida slug/role (e o placement) antes de qualquer efeito colateral.
   const dbName = tenantDatabaseName(tenant.slug);
+  const roleName = tenantRoleName(tenant.slug);
   const placement = deps.resolvePlacement(tenant.dbPlacement);
 
   const createResult = await deps.createDatabase(placement, dbName);
-  await deps.migrateTenantDb(placement, dbName);
-  await deps.seedTenantDb(placement, dbName, tenant);
+
+  // Role dedicada e dona do banco: a credencial do tenant não abre os outros.
+  const password = deps.generatePassword();
+  await deps.ensureRole(placement, dbName, roleName, password);
+
+  // Migra/seeda COMO a role, para ela ser dona dos objetos que cria.
+  const asTenantRole: Placement = {
+    name: placement.name,
+    host: placement.host,
+    port: placement.port,
+    user: roleName,
+    password,
+  };
+  await deps.migrateTenantDb(asTenantRole, dbName);
+  await deps.seedTenantDb(asTenantRole, dbName, tenant);
 
   await deps.saveCredentials(tenantId, {
     host: placement.host,
     porta: placement.port,
     dbname: dbName,
-    usuario: placement.user,
-    senhaCifrada: deps.encrypt(placement.password),
+    usuario: roleName,
+    senhaCifrada: deps.encrypt(password),
     servidor: placement.name,
   });
   await deps.activateTenant(tenantId);
@@ -103,5 +146,12 @@ export async function provisionTenant(
     database: dbName,
     placement: placement.name,
     created: createResult === 'created',
+    credentials: {
+      host: placement.host,
+      port: placement.port,
+      database: dbName,
+      user: roleName,
+      password,
+    },
   };
 }

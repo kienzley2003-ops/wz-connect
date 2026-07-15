@@ -1,8 +1,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { DashboardResponse } from '@wz/shared';
-import { login, fetchSession, fetchDashboard, type Session } from './lib/api.js';
+import {
+  login,
+  fetchSession,
+  fetchDashboard,
+  fetchTenants,
+  fetchModuleCatalog,
+  createTenant,
+  provisionTenant,
+  setTenantModules,
+  type Session,
+  type AdminTenant,
+  type ModuleCatalogItem,
+  type ProvisionResult,
+} from './lib/api.js';
 import { ModuleNav } from './components/ModuleNav.js';
 import { Dashboard } from './components/Dashboard.js';
+import { TenantList } from './components/TenantList.js';
 
 const TOKEN_KEY = 'wz_connect_token';
 
@@ -12,6 +26,11 @@ export function App() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tenants, setTenants] = useState<AdminTenant[] | null>(null);
+  const [catalog, setCatalog] = useState<ModuleCatalogItem[]>([]);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  /** Credencial revelada no provisionamento — mostrada UMA vez. */
+  const [revealed, setRevealed] = useState<ProvisionResult | null>(null);
 
   const signOut = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -53,6 +72,60 @@ export function App() {
       active = false;
     };
   }, [token, session?.tenant]);
+
+  const isPlatformAdmin = session?.platformRole === 'platform_super_admin';
+
+  const loadAdmin = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [ts, cat] = await Promise.all([fetchTenants(token), fetchModuleCatalog(token)]);
+      setTenants(ts);
+      setCatalog(cat);
+      setAdminError(null);
+    } catch (err) {
+      setAdminError((err as Error).message);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (isPlatformAdmin) void loadAdmin();
+  }, [isPlatformAdmin, loadAdmin]);
+
+  async function handleCreateTenant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) return;
+    const form = new FormData(event.currentTarget);
+    try {
+      await createTenant(token, {
+        nome: String(form.get('nome')),
+        slug: String(form.get('slug')),
+      });
+      event.currentTarget.reset();
+      await loadAdmin();
+    } catch (err) {
+      setAdminError((err as Error).message);
+    }
+  }
+
+  async function handleProvision(id: string) {
+    if (!token) return;
+    try {
+      setRevealed(await provisionTenant(token, id));
+      await loadAdmin();
+    } catch (err) {
+      setAdminError((err as Error).message);
+    }
+  }
+
+  async function handleToggleModule(id: string, modules: string[]) {
+    if (!token) return;
+    try {
+      await setTenantModules(token, id, modules);
+      await loadAdmin();
+    } catch (err) {
+      setAdminError((err as Error).message);
+    }
+  }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,6 +196,72 @@ export function App() {
           <section>
             <h3 className="mb-3 text-lg font-semibold">Painel (últimas 24h)</h3>
             <Dashboard data={dashboard} error={dashboardError} />
+          </section>
+        )}
+
+        {isPlatformAdmin && (
+          <section className="border-t border-slate-800 pt-6">
+            <h3 className="mb-3 text-lg font-semibold">Administração · Empresas</h3>
+
+            <form onSubmit={handleCreateTenant} className="mb-4 flex flex-wrap gap-2">
+              <input
+                name="nome"
+                required
+                placeholder="Nome da empresa"
+                aria-label="Nome da empresa"
+                className="rounded bg-slate-800 px-3 py-2 text-sm"
+              />
+              <input
+                name="slug"
+                required
+                pattern="[a-z][a-z0-9_]*"
+                title="minúsculas, começando por letra"
+                placeholder="slug (ex.: acme)"
+                aria-label="Slug"
+                className="rounded bg-slate-800 px-3 py-2 text-sm"
+              />
+              <button type="submit" className="rounded bg-sky-600 px-4 py-2 text-sm font-medium">
+                Cadastrar
+              </button>
+            </form>
+
+            {adminError && (
+              <p role="alert" className="mb-3 rounded bg-red-950 p-3 text-sm text-red-300">
+                {adminError}
+              </p>
+            )}
+
+            {revealed && (
+              <div className="mb-4 rounded bg-amber-950 p-3 text-sm text-amber-200">
+                <p className="font-semibold">
+                  Credencial do banco — copie agora, ela não é mostrada de novo:
+                </p>
+                <pre className="mt-2 overflow-x-auto text-xs">
+                  {`host:     ${revealed.credentials.host}:${revealed.credentials.port}
+database: ${revealed.credentials.database}
+user:     ${revealed.credentials.user}
+password: ${revealed.credentials.password}`}
+                </pre>
+                <button
+                  onClick={() => setRevealed(null)}
+                  className="mt-2 text-xs underline"
+                  type="button"
+                >
+                  Já guardei, fechar
+                </button>
+              </div>
+            )}
+
+            {tenants === null ? (
+              <p className="text-slate-400">Carregando empresas…</p>
+            ) : (
+              <TenantList
+                tenants={tenants}
+                catalog={catalog}
+                onProvision={handleProvision}
+                onToggleModule={handleToggleModule}
+              />
+            )}
           </section>
         )}
       </main>

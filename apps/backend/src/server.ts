@@ -16,6 +16,7 @@ import { createModulesRegistry } from './modules/index.js';
 import { registerModules } from './modules/register-modules.js';
 import { registerTenantsRoutes } from './routes/tenants.routes.js';
 import { createProvisioningDeps } from './provisioning/create-provisioning.js';
+import { registerBiRoutes } from './routes/bi.routes.js';
 
 // Versão do serviço (injetada pelo pnpm em runtime; fallback para dev/docker).
 const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
@@ -85,6 +86,9 @@ async function main(): Promise<void> {
     const modulesRegistry = createModulesRegistry();
     registerModules(app, { registry: modulesRegistry, guard });
     app.log.info(`Módulos carregados: ${modulesRegistry.keys().join(', ')}`);
+
+    // Fase 6: BI — ingestão por push e painel consolidado.
+    registerBiRoutes(app, { guard, coreDb });
 
     // Fase 4: gestão e provisionamento de tenants (plataforma).
     registerTenantsRoutes(app, {

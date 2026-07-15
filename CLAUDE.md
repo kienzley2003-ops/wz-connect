@@ -138,12 +138,28 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
     endpoint de credencial em runtime. Rotação/remediação: `db:harden-tenants`.
   - `modules/masterfila` reposicionado como **console** do produto (as rotas de negócio ficam
     no app separado). 183 testes no backend, 26 no SDK.
-- **Próximo — Fase 5 (resto)**: integrar o repo `wz-masterfila` (auth delegada via SDK, conexão
-  dinâmica, remoção do `organizacao_id` via expand/contract, split do banco único). Depois:
-  Fase 6 (BI por push + dashboard).
+- **Fase 6 concluída** (2026-07-14, em `develop`, branch `feature/bi`): BI por push (ADR-013) —
+  contrato de métricas em `@wz/shared`, tabela `metric_snapshots` (unique por
+  tenant/módulo/métrica/granularidade/bucket = **idempotência**), `toBucket` (UTC) e `summarize`
+  (read model), `POST /metrics/ingest` + `GET /dashboard`, `reportMetrics` no SDK e **dashboard
+  no console**. E2E verificado: push → painel soma 2 janelas (128); **reenvio não dobra**;
+  módulo não contratado → 403; payload inválido → 400; tenant só vê as próprias métricas.
+- **Próximo — Fase 5 (resto), único item de produto em aberto**: integrar o repo
+  `wz-masterfila` (auth delegada via SDK, conexão dinâmica, remoção do `organizacao_id` via
+  expand/contract, split do banco único). **Todas as fases dentro do Connect estão fechadas.**
   Depois: Fase 6 (BI por push + dashboard). **Sempre conferir a coluna Status em
   `docs/ARQUITETURA.md` §14 antes de anunciar a próxima fase** (fonte da verdade — já errei
   isso uma vez).
+
+### Convenções de BI (Fase 6)
+
+- Módulos reportam **valor de janela**, nunca eventos crus. O bucket é **renormalizado no
+  servidor** (`toBucket`, UTC) — não confiar no que o cliente mandou.
+- O **tenant vem do token** (`tnt`), nunca do corpo. Mesma regra vale para qualquer rota
+  escopada a tenant.
+- Idempotência vem do unique + `onConflictDoUpdate`. Ao acrescentar dimensão à métrica,
+  **incluí-la no unique**, senão volta a duplicar.
+- Regra de agregação fica em `core/bi/aggregate.ts` (função pura). Não recalcular em rota.
 
 ### Convenções de segurança de banco (Fase 5)
 

@@ -9,14 +9,17 @@ export default defineConfig({
     // host: true permite acessar por subdomínio (ex.: http://demo.localhost:3001),
     // que é como o backend identifica o tenant.
     host: true,
-    proxy: {
-      // changeOrigin fica false de propósito: preserva o Host original para o
-      // backend extrair o subdomínio do tenant.
-      '/auth': { target: 'http://localhost:3000', changeOrigin: false },
-      '/entitlements': { target: 'http://localhost:3000', changeOrigin: false },
-      '/modules': { target: 'http://localhost:3000', changeOrigin: false },
-      '/tenant': { target: 'http://localhost:3000', changeOrigin: false },
-    },
+    // changeOrigin fica false de propósito: preserva o Host original para o
+    // backend extrair o subdomínio do tenant.
+    //
+    // ⚠️ Toda rota de API precisa estar aqui. O que faltar cai no fallback SPA
+    // do Vite e volta como HTML — o fetch quebra ao parsear, com sintoma
+    // confuso. Ao criar rota nova no backend, adicione o prefixo nesta lista.
+    proxy: Object.fromEntries(
+      ['/auth', '/entitlements', '/modules', '/tenant', '/tenants', '/dashboard', '/metrics'].map(
+        (prefix) => [prefix, { target: 'http://localhost:3000', changeOrigin: false }],
+      ),
+    ),
   },
   test: {
     globals: true,

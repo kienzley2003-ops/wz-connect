@@ -1,3 +1,4 @@
+import type { PlatformRole } from '@wz/shared';
 import { isLocked, registerFailure, registerSuccess } from './lockout.js';
 
 export interface AuthUser {
@@ -5,6 +6,8 @@ export interface AuthUser {
   readonly email: string;
   readonly senhaHash: string;
   readonly status: 'ativo' | 'bloqueado' | 'desativado';
+  /** Papel na plataforma (WZ). `null` para usuário comum de tenant. */
+  readonly platformRole: PlatformRole | null;
   readonly tentativasLogin: number;
   readonly bloqueadoAte: Date | null;
 }
@@ -60,6 +63,7 @@ export interface AuthServiceDeps {
   readonly signToken: (claims: {
     sub: string;
     sid: string;
+    prole?: PlatformRole;
     tnt?: string;
     roles?: string[];
     mods?: string[];
@@ -136,6 +140,7 @@ export class AuthService {
     const token = await this.deps.signToken({
       sub: user.id,
       sid: sessionId,
+      ...(user.platformRole ? { prole: user.platformRole } : {}),
       ...(scope ? { tnt: scope.subdomain, roles: scope.roles, mods: scope.mods } : {}),
     });
     return { token, userId: user.id, sessionId };

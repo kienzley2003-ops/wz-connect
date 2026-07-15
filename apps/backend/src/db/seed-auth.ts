@@ -48,10 +48,16 @@ async function main(): Promise<void> {
       email: ADMIN_EMAIL,
       senhaHash: await hashPassword(ADMIN_PASSWORD),
       status: 'ativo',
+      platformRole: 'platform_super_admin',
     });
     console.log(`[seed-auth] admin criado (${ADMIN_EMAIL} / ${ADMIN_PASSWORD})`);
   } else {
-    console.log('[seed-auth] admin já existe');
+    // Idempotente: garante o papel de plataforma em bases já semeadas.
+    await db
+      .update(users)
+      .set({ platformRole: 'platform_super_admin' })
+      .where(eq(users.email, ADMIN_EMAIL));
+    console.log('[seed-auth] admin já existe (papel de plataforma garantido)');
   }
 
   await pool.end();

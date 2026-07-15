@@ -24,7 +24,7 @@ const APP_VERSION = process.env.npm_package_version ?? '0.0.0';
 const JWT_ISSUER = process.env.JWT_ISSUER ?? 'wz-connect';
 
 // Rotas de plataforma isentas de resolução de tenant (auth global, health, JWKS, tenants).
-const EXEMPT_PREFIXES = ['/health', '/auth', '/.well-known', '/tenants'];
+const EXEMPT_PREFIXES = ['/health', '/auth', '/.well-known', '/tenants', '/api/v1/docs'];
 const isExempt = (url: string): boolean => {
   const path = url.split('?')[0] ?? url;
   return path === '/' || EXEMPT_PREFIXES.some((p) => path.startsWith(p));
@@ -36,10 +36,13 @@ async function main(): Promise<void> {
   const pool = createCorePool(cfg.coreDatabaseUrl);
   const coreDb = createCoreDb(pool);
 
-  const app = buildApp({
+  const app = await buildApp({
     version: APP_VERSION,
     checkCoreDb: () => checkCoreDb(pool),
     logger: true,
+    // Limites da §10 da arquitetura: global amplo, login agressivo.
+    rateLimit: { global: 200, login: 10, timeWindow: 60_000 },
+    docs: true,
   });
 
   // Fase 1: resolução de tenant por subdomínio.
@@ -68,7 +71,11 @@ async function main(): Promise<void> {
       getSubdomain,
     });
 
-    registerAuthRoutes(app, auth, { guard, getSubdomain });
+    registerAuthRoutes(app, auth, {
+      guard,
+      getSubdomain,
+      loginRateLimit: { max: 10, timeWindow: 60_000 },
+    });
     registerLicensingRoutes(app, {
       guard,
       getTenantEntitlements: (subdomain) => getTenantEntitlements(coreDb, subdomain),

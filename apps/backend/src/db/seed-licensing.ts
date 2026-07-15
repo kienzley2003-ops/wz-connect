@@ -3,6 +3,7 @@ import { loadDotenvIfPresent } from '../config/load-dotenv.js';
 import { loadEnv } from '../config/env.js';
 import { createCorePool, createCoreDb } from './core/client.js';
 import { tenants, users, plans, modules, tenantModules, memberships } from './core/schema.js';
+import { hashPassword } from '../core/auth/password.service.js';
 
 /**
  * Seed de DEV do licenciamento (Fase 3): plano com limites, catálogo de módulos,
@@ -11,6 +12,9 @@ import { tenants, users, plans, modules, tenantModules, memberships } from './co
  */
 const SUBDOMAIN = 'demo';
 const ADMIN_EMAIL = 'admin@wzconnect.com';
+/** Usuário comum do tenant: SEM papel de plataforma (exercita o 403 do RBAC). */
+const OPERADOR_EMAIL = 'operador@wzconnect.com';
+const OPERADOR_PASSWORD = 'Operador@1234';
 const PLAN_NAME = 'Pro';
 const PLAN_LIMITS = { guiches_max: 10, relatorios: true, beta: false };
 const MODULE_CATALOG = [
@@ -77,6 +81,28 @@ async function main(): Promise<void> {
     .values({ userId: admin.id, tenantId: tenant.id, role: 'org_owner' })
     .onConflictDoNothing();
   console.log(`[seed-licensing] membership: ${ADMIN_EMAIL} → ${SUBDOMAIN} (org_owner)`);
+
+  // 6. Usuário comum do tenant (sem papel de plataforma).
+  let [operador] = await db.select().from(users).where(eq(users.email, OPERADOR_EMAIL)).limit(1);
+  if (!operador) {
+    [operador] = await db
+      .insert(users)
+      .values({
+        email: OPERADOR_EMAIL,
+        senhaHash: await hashPassword(OPERADOR_PASSWORD),
+        status: 'ativo',
+        // platformRole fica NULL de propósito.
+      })
+      .returning();
+    console.log(`[seed-licensing] operador criado (${OPERADOR_EMAIL} / ${OPERADOR_PASSWORD})`);
+  }
+  if (operador) {
+    await db
+      .insert(memberships)
+      .values({ userId: operador.id, tenantId: tenant.id, role: 'org_member' })
+      .onConflictDoNothing();
+    console.log(`[seed-licensing] membership: ${OPERADOR_EMAIL} → ${SUBDOMAIN} (org_member)`);
+  }
 
   await pool.end();
   console.log('[seed-licensing] concluído');

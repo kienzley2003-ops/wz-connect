@@ -17,6 +17,7 @@ function user(overrides: Partial<AuthUser> = {}): AuthUser {
     email: 'admin@wz.test',
     senhaHash: 'hash',
     status: 'ativo',
+    platformRole: null,
     tentativasLogin: 0,
     bloqueadoAte: null,
     ...overrides,
@@ -133,6 +134,44 @@ describe('AuthService.login', () => {
       await expect(
         new AuthService(deps).login('admin@wz.test', 'senha', 'outro'),
       ).rejects.toBeInstanceOf(TenantAccessDeniedError);
+    });
+  });
+
+  describe('papel de plataforma', () => {
+    it('inclui o claim prole quando o usuário é da plataforma', async () => {
+      const deps = makeDeps({
+        findUserByEmail: vi.fn(async () => user({ platformRole: 'platform_super_admin' })),
+      });
+      await new AuthService(deps).login('admin@wz.test', 'senha');
+
+      expect(deps.signToken).toHaveBeenCalledWith({
+        sub: 'user-1',
+        sid: 'sess-1',
+        prole: 'platform_super_admin',
+      });
+    });
+
+    it('omite prole para usuário comum', async () => {
+      const deps = makeDeps();
+      await new AuthService(deps).login('admin@wz.test', 'senha');
+
+      expect(deps.signToken).toHaveBeenCalledWith({ sub: 'user-1', sid: 'sess-1' });
+    });
+
+    it('combina prole com o escopo de tenant', async () => {
+      const deps = makeDeps({
+        findUserByEmail: vi.fn(async () => user({ platformRole: 'platform_support' })),
+      });
+      await new AuthService(deps).login('admin@wz.test', 'senha', 'acme');
+
+      expect(deps.signToken).toHaveBeenCalledWith({
+        sub: 'user-1',
+        sid: 'sess-1',
+        prole: 'platform_support',
+        tnt: 'acme',
+        roles: ['org_admin'],
+        mods: ['masterfila'],
+      });
     });
   });
 });

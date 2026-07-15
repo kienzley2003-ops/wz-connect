@@ -117,10 +117,29 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   `POST /tenants/:id/provisionar`. CLI: `pnpm --filter @wz/backend db:migrate-tenants`.
   E2E verificado: tenant `acme` criado do zero → banco `wz_tenant_acme` + `tenant_info` seedado
   → status `ativo` → resolve em `acme.localhost`; reprovisionar → 409. 158 testes no backend.
+- **Hardening concluído** (2026-07-14, em `develop`, branch `feature/hardening`) — fechou as
+  pendências acumuladas: **RBAC de plataforma** (coluna `platform_role` em `users`, claim
+  `prole`, `createPlatformGuard`; `/tenants` e `/provisionar` agora exigem
+  `platform_super_admin` → 403 `platform_role_required`), **rate limit** (200/min global +
+  10/min em `/auth/login`, por IP — complementa o lockout por conta) e **OpenAPI/Swagger** em
+  `/api/v1/docs` (as deps existiam desde a Fase 0 sem uso). Seeds: admin vira
+  `platform_super_admin`; `operador@wzconnect.com`/`Operador@1234` é usuário comum (sem `prole`).
+  171 testes no backend. **Sem TODOs pendentes no código.**
 - **Próximo — Fase 5**: 1º módulo de produto (MasterFila via `@wz/connect-sdk`, ADR-011).
   Depois: Fase 6 (BI por push + dashboard). **Sempre conferir a coluna Status em
   `docs/ARQUITETURA.md` §14 antes de anunciar a próxima fase** (fonte da verdade — já errei
   isso uma vez).
+
+### Convenções de segurança
+
+- **Camadas de autorização**, nesta ordem de preHandler: `guard` (auth) → `createPlatformGuard`
+  (papel de plataforma) ou `createModuleGuard` (módulo contratado). Os dois últimos dependem de
+  `request.authUser`.
+- Rota que atravessa tenants (gestão/provisionamento) **exige `platform_super_admin`**.
+- **`buildApp` é async**: `register()` do Fastify é preguiçoso e rotas declaradas logo depois
+  capturam só os hooks já existentes. Sem `await register(...)` antes das rotas, o rate limit
+  (e qualquer hook global de plugin) **não se aplica** — falha silenciosa.
+- Defesa em profundidade no login: rate limit por IP (10/min) + lockout por conta (5→15min).
 
 ### Convenções de provisionamento (Fase 4)
 

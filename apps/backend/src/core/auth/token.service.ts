@@ -5,6 +5,8 @@ export interface AccessTokenClaims extends JWTPayload {
   sub: string;
   /** Id da sessão ativa (sessão única — ADR-008). */
   sid: string;
+  /** Papel de plataforma (ausente para usuário comum). */
+  prole?: string;
   /** Tenant/subdomínio ativo (preenchido a partir da Fase 3). */
   tnt?: string;
   roles?: string[];

@@ -12,6 +12,8 @@ export interface AuthRoutesDeps {
   readonly guard: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   /** Subdomínio da request: escopa o login ao tenant quando presente. */
   readonly getSubdomain: (request: FastifyRequest) => string | null;
+  /** Limite específico do login (mais agressivo que o global). Omitido = sem limite. */
+  readonly loginRateLimit?: { max: number; timeWindow: number };
 }
 
 /** Registra as rotas de autenticação global (ADR-008). São isentas de tenant. */
@@ -20,7 +22,9 @@ export function registerAuthRoutes(
   auth: AuthModule,
   deps: AuthRoutesDeps,
 ): void {
-  app.post('/auth/login', async (request, reply) => {
+  const loginOptions = deps.loginRateLimit ? { config: { rateLimit: deps.loginRateLimit } } : {};
+
+  app.post('/auth/login', loginOptions, async (request, reply) => {
     const body = request.body as { email?: string; password?: string } | undefined;
     if (!body?.email || !body?.password) {
       return reply.code(400).send({ error: 'email_password_required' });

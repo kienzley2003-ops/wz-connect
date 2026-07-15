@@ -11,6 +11,7 @@ export async function findAuthUserByEmail(coreDb: CoreDb, email: string): Promis
     email: row.email,
     senhaHash: row.senhaHash,
     status: row.status,
+    platformRole: row.platformRole,
     tentativasLogin: row.tentativasLogin,
     bloqueadoAte: row.bloqueadoAte,
   };

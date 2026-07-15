@@ -28,6 +28,12 @@ export const orgRoleEnum = pgEnum('org_role', ['org_owner', 'org_admin', 'org_me
 
 export const userStatusEnum = pgEnum('user_status', ['ativo', 'bloqueado', 'desativado']);
 
+/** Papéis a nível de PLATAFORMA (WZ, dona da suíte). NULL = usuário comum. */
+export const platformRoleEnum = pgEnum('platform_role', [
+  'platform_super_admin',
+  'platform_support',
+]);
+
 export const signingKeyStatusEnum = pgEnum('signing_key_status', ['active', 'retiring', 'revoked']);
 
 /** Planos disponíveis (só registro de plano; sem gateway de pagamento). */
@@ -84,6 +90,9 @@ export const users = pgTable(
     email: text('email').notNull(),
     senhaHash: text('senha_hash').notNull(),
     status: userStatusEnum('status').notNull().default('ativo'),
+    // Nullable de propósito: a esmagadora maioria dos usuários não é da plataforma.
+    // Coluna adicionada em migração aditiva (expand — ADR-009).
+    platformRole: platformRoleEnum('platform_role'),
     tentativasLogin: integer('tentativas_login').notNull().default(0),
     bloqueadoAte: timestamp('bloqueado_ate', { withTimezone: true }),
     sessaoAtivaId: uuid('sessao_ativa_id'),

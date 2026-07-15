@@ -4,9 +4,11 @@ import {
   uuid,
   text,
   integer,
+  doublePrecision,
   timestamp,
   jsonb,
   uniqueIndex,
+  index,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -169,6 +171,41 @@ export const signingKeys = pgTable(
   },
   (t) => ({
     kidIdx: uniqueIndex('signing_keys_kid_idx').on(t.kid),
+  }),
+);
+
+export const metricGranularityEnum = pgEnum('metric_granularity', ['hour', 'day']);
+
+/**
+ * Snapshots de métricas por tenant/módulo/janela (BI — ADR-013).
+ *
+ * Read model do CQRS-lite: os módulos empurram o **valor da janela**, não
+ * eventos. O unique (tenant, módulo, métrica, granularidade, bucket) é o que
+ * torna a ingestão idempotente — reenviar a mesma janela sobrescreve.
+ */
+export const metricSnapshots = pgTable(
+  'metric_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    modulo: text('modulo').notNull(),
+    metrica: text('metrica').notNull(),
+    valor: doublePrecision('valor').notNull(),
+    granularidade: metricGranularityEnum('granularidade').notNull(),
+    bucket: timestamp('bucket', { withTimezone: true }).notNull(),
+    recebidoEm: timestamp('recebido_em', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pontoIdx: uniqueIndex('metric_snapshots_ponto_idx').on(
+      t.tenantId,
+      t.modulo,
+      t.metrica,
+      t.granularidade,
+      t.bucket,
+    ),
+    consultaIdx: index('metric_snapshots_consulta_idx').on(t.tenantId, t.bucket),
   }),
 );
 

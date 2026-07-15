@@ -15,7 +15,7 @@ montar a navegação do frontend dinamicamente — sem duplicar lógica de boots
 
 ## Decisão
 
-Modelar cada produto como um **plugin Fastify encapsulado**, carregado por `@fastify/autoload`,
+Modelar cada produto como um **plugin Fastify encapsulado**, registrado via `ModulesRegistry`,
 que implementa um **contrato comum** (padrão Adapter):
 
 ```ts
@@ -37,7 +37,7 @@ interface WzModule {
 
 **Positivas**
 
-- Adicionar um produto = criar um plugin que cumpre o contrato; `autoload` faz a fiação.
+- Adicionar um produto = criar um plugin que cumpre o contrato e registrá-lo no registry; o `registerModules` faz o resto (prefixo + guards).
 - Habilitar/desabilitar por tenant é dado no CORE, sem deploy.
 - Contrato único (schema+migrations+plugin+seed) mantém os módulos consistentes (DRY).
 - Zero dependência de framework além do Fastify já adotado.
@@ -46,6 +46,21 @@ interface WzModule {
 
 - Todos os módulos vivem no mesmo runtime (modular monolith) — acoplamento de deploy; aceitável no estágio atual e reversível (um plugin pode virar serviço depois).
 - Disciplina necessária para módulos não acessarem tabelas uns dos outros diretamente.
+
+## Emenda (2026-07-14, na implementação da Fase 3)
+
+A proposta original carregava os plugins com **`@fastify/autoload`** (descoberta por convenção
+de diretório). Na implementação optamos por **registro explícito** numa lista
+(`modules/index.ts` → `createModulesRegistry()`), porque:
+
+- é **determinístico** — a ordem e o conjunto de módulos não dependem do sistema de arquivos;
+- é **testável** — o registry é uma classe pura, coberta por testes unitários (duplicidade,
+  `enabledFor`, `missing`/drift), o que a mágica de FS não permitiria;
+- evita uma dependência a mais para um ganho pequeno (a lista tem uma linha por módulo).
+
+O `registerModules` continua usando o **encapsulamento de plugins do Fastify** (`app.register`
+com prefixo), que é o coração desta decisão — e isso está verificado por teste (hooks de um
+módulo não vazam para outro). `@fastify/autoload` sai da stack para este fim.
 
 ## Alternativas consideradas
 

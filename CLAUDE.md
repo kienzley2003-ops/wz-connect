@@ -102,13 +102,28 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   (403 `tenant_mismatch`) e **guard de módulo** (403 `module_not_enabled`). Rotas:
   `GET /entitlements`, `POST /entitlements/check`. E2E verificado (9 cenários). 106 testes.
   Seed: `pnpm --filter @wz/backend db:seed-licensing`.
-- **Atenção à numeração das fases** — o entregue acima cobre o **gate da Fase 3** (módulo
-  habilita/desabilita por tenant) **+ o licenciamento da Fase 6** (adiantado). Ainda faltam:
-  - **Fase 3 (resto)**: `ModulesRegistry` + autoload de plugins Fastify + navegação dinâmica no frontend.
-  - **Fase 4**: provisionamento (`tenant-migrator`, `POST /provisionar`, `db_placement`).
-  - **Fase 5**: 1º módulo de produto (MasterFila via SDK).
-  - **Fase 6 (resto)**: BI por push + dashboard.
-    Ver a coluna **Status** em `docs/ARQUITETURA.md` §14 (fonte da verdade).
+- **Fase 3 concluída** (2026-07-14, em `develop`): sistema de módulos — `WzModule` (contrato),
+  `ModulesRegistry` (registro, `enabledFor`, `missing`/drift), `registerModules` (monta cada
+  módulo como **plugin Fastify encapsulado** sob `/modules/<key>` aplicando guard de auth +
+  guard de módulo automaticamente), esqueletos `masterfila`/`agenda`, e **navegação dinâmica**
+  no frontend (`buildNavItems` + `ModuleNav`, filtrando o catálogo compartilhado pelo claim
+  `mods`). E2E verificado por API **e no navegador** (login em `demo.localhost:3001` → nav
+  mostra só MasterFila). 119 testes no backend, 8 no frontend, 7 no shared.
+- **Próximo — Fase 4**: provisionamento (`tenant-migrator`, `POST /tenants/:id/provisionar`,
+  `db_placement`). Depois: Fase 5 (MasterFila via `@wz/connect-sdk`) e Fase 6 (BI por push).
+  **Sempre conferir a coluna Status em `docs/ARQUITETURA.md` §14 antes de anunciar a próxima
+  fase** (fonte da verdade — já errei isso uma vez).
+
+### Convenções de módulos (Fase 3)
+
+- Adicionar um módulo: criar `src/modules/<key>/index.ts` exportando um `WzModule` e registrá-lo
+  em `src/modules/index.ts` (`createModulesRegistry`). O prefixo e os guards vêm de graça.
+- **Registro explícito, não `@fastify/autoload`** — decisão revista na emenda do ADR-007
+  (determinismo + testabilidade). Não reintroduzir autoload sem novo ADR.
+- Rotas do módulo acessam o banco do tenant via `getTenantDb()`/`getTenantContext()`.
+- Metadados de módulo (key/label/path) vivem em `@wz/shared` (`MODULE_CATALOG`) — fonte única
+  para backend e frontend. Ao criar um módulo, adicione-o ao catálogo **e** à tabela `modules`
+  do CORE (o seed faz isso em dev).
 
 ### Convenções de licenciamento
 

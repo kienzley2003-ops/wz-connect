@@ -19,7 +19,7 @@ o **WZ MasterFila** já roda em Fastify, o time domina a stack, e a lei do proje
 Adotar **Fastify 5.x** (puro), como no MasterFila.
 
 - **Contexto de tenant** via `onRequest`/`preHandler` **hooks** + **`AsyncLocalStorage`** (ADR-005).
-- **Módulos** como **plugins encapsulados**, carregados por `@fastify/autoload` (ADR-007). O encapsulamento do Fastify isola hooks/decorators/error handlers de cada módulo.
+- **Módulos** como **plugins encapsulados**, registrados via `ModulesRegistry` (ADR-007). O encapsulamento do Fastify isola hooks/decorators/error handlers de cada módulo.
 - **Autorização** por hooks declarativos + um `AuthorizationService` único (padrão Policy).
 - **DI leve** por composição de funções/factories (ou `awilix` se a árvore crescer) — sem container pesado.
 - Plugins conhecidos: `@fastify/jwt`, `@fastify/rate-limit`, `@fastify/swagger`, `@fastify/websocket`.
@@ -36,7 +36,7 @@ Adotar **Fastify 5.x** (puro), como no MasterFila.
 **Trade-offs**
 
 - Sem estrutura imposta: convenções de organização (módulos, camadas) precisam ser mantidas por disciplina e review, não pelo framework.
-- DI e ciclo de vida de módulos são responsabilidade nossa (mitigado por `autoload` + factories testáveis).
+- DI e ciclo de vida de módulos são responsabilidade nossa (mitigado pelo registry explícito + factories testáveis).
 
 ## Alternativas consideradas
 

@@ -95,8 +95,28 @@ barrels e bootstrap de I/O (ex.: `load-dotenv.ts`) são excluídos.
   `GET /.well-known/jwks.json` (isentas de tenant). Login E2E verificado (login, me, jwks, senha
   errada, invalidação da sessão anterior). Seed: `pnpm --filter @wz/backend db:seed-auth`
   (admin `admin@wzconnect.com` / `Admin@1234` + signing key). 84 testes no backend.
-- **Próximo — Fase 3**: licenciamento (products, plans, subscriptions, entitlements) +
-  claims `tnt`/`roles`/`mods` no token e binding subdomínio×tnt. Ver `docs/ARQUITETURA.md` §14.
+- **Licenciamento + habilitação de módulos concluídos** (2026-07-14, em `develop`, branch
+  `feature/licensing`): entitlements (`resolveEntitlements`/`checkEntitlement` — planos com
+  limites JSONB + módulos habilitados), claims **`tnt`/`roles`/`mods`** no token, login
+  escopado ao tenant (exige membership), **binding subdomínio×`tnt`** no guard
+  (403 `tenant_mismatch`) e **guard de módulo** (403 `module_not_enabled`). Rotas:
+  `GET /entitlements`, `POST /entitlements/check`. E2E verificado (9 cenários). 106 testes.
+  Seed: `pnpm --filter @wz/backend db:seed-licensing`.
+- **Atenção à numeração das fases** — o entregue acima cobre o **gate da Fase 3** (módulo
+  habilita/desabilita por tenant) **+ o licenciamento da Fase 6** (adiantado). Ainda faltam:
+  - **Fase 3 (resto)**: `ModulesRegistry` + autoload de plugins Fastify + navegação dinâmica no frontend.
+  - **Fase 4**: provisionamento (`tenant-migrator`, `POST /provisionar`, `db_placement`).
+  - **Fase 5**: 1º módulo de produto (MasterFila via SDK).
+  - **Fase 6 (resto)**: BI por push + dashboard.
+    Ver a coluna **Status** em `docs/ARQUITETURA.md` §14 (fonte da verdade).
+
+### Convenções de licenciamento
+
+- Regra única de licenciamento em `core/licensing/entitlements.ts` (padrão Policy — DRY).
+  Não duplicar checagem de limite/módulo em rotas.
+- O guard de módulo usa o claim `mods` do token (rápido, sem DB); mudanças de módulo só valem
+  após novo login. Já `/entitlements` lê o CORE (sempre fresco).
+- Ordem dos preHandlers: guard de auth **antes** do guard de módulo (este depende de `authUser`).
 
 ### Convenções de tenancy (Fase 1)
 

@@ -4,6 +4,8 @@ import { findModule } from '@wz/shared';
 export interface DashboardProps {
   /** `null` enquanto carrega. */
   readonly data: DashboardResponse | null;
+  /** Código do erro, quando a busca falhou. */
+  readonly error?: string | null;
 }
 
 const formatNumber = (n: number): string => new Intl.NumberFormat('pt-BR').format(n);
@@ -19,7 +21,16 @@ function groupByModule(metrics: readonly DashboardMetric[]): Map<string, Dashboa
 }
 
 /** Painel consolidado: métricas de todos os módulos do tenant (ADR-013). */
-export function Dashboard({ data }: DashboardProps) {
+export function Dashboard({ data, error }: DashboardProps) {
+  // Erro antes de tudo: engolir a falha e seguir mostrando "Carregando" faz o
+  // painel quebrado parecer lento — foi exatamente o que aconteceu uma vez.
+  if (error) {
+    return (
+      <p role="alert" className="rounded bg-red-950 p-3 text-sm text-red-300">
+        Não foi possível carregar o painel ({error}).
+      </p>
+    );
+  }
   if (!data) {
     return <p className="text-slate-400">Carregando métricas…</p>;
   }

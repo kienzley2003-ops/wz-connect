@@ -10,6 +10,7 @@ export function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [session, setSession] = useState<Session | null>(null);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const signOut = useCallback(() => {
@@ -17,6 +18,7 @@ export function App() {
     setToken(null);
     setSession(null);
     setDashboard(null);
+    setDashboardError(null);
   }, []);
 
   useEffect(() => {
@@ -38,12 +40,14 @@ export function App() {
   useEffect(() => {
     if (!token || !session?.tenant) return;
     let active = true;
+    setDashboardError(null);
     fetchDashboard(token)
       .then((d) => {
         if (active) setDashboard(d);
       })
-      .catch(() => {
-        // Painel indisponível não deve derrubar o console.
+      .catch((err: Error) => {
+        // Painel indisponível não derruba o console — mas o erro fica VISÍVEL.
+        if (active) setDashboardError(err.message);
       });
     return () => {
       active = false;
@@ -118,7 +122,7 @@ export function App() {
         {session.tenant && (
           <section>
             <h3 className="mb-3 text-lg font-semibold">Painel (últimas 24h)</h3>
-            <Dashboard data={dashboard} />
+            <Dashboard data={dashboard} error={dashboardError} />
           </section>
         )}
       </main>

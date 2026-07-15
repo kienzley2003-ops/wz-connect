@@ -55,6 +55,22 @@ describe('Dashboard', () => {
     expect(screen.getByText(/carregando/i)).toBeInTheDocument();
   });
 
+  it('mostra o erro em vez de carregar para sempre quando a busca falha', () => {
+    // Regressão: um catch silencioso deixava o painel em "Carregando…" eterno,
+    // indistinguível de lentidão.
+    render(<Dashboard data={null} error="http_500" />);
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/http_500/)).toBeInTheDocument();
+    expect(screen.queryByText(/carregando/i)).not.toBeInTheDocument();
+  });
+
+  it('o erro tem precedência sobre dados antigos', () => {
+    render(<Dashboard data={data()} error="falhou" />);
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
   it('formata números grandes de forma legível', () => {
     render(
       <Dashboard

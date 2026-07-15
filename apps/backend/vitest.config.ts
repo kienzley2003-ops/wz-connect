@@ -16,6 +16,7 @@ export default defineConfig({
         'src/tenancy/**',
         'src/core/auth/**',
         'src/core/licensing/**',
+        'src/core/bi/**',
         'src/modules/**',
         'src/provisioning/**',
       ],
@@ -30,6 +31,7 @@ export default defineConfig({
         'src/core/auth/signing-key.repository.ts',
         'src/core/auth/create-auth.ts',
         'src/core/licensing/licensing.repository.ts',
+        'src/core/bi/bi.repository.ts',
         // Módulos de produto (I/O no banco do tenant) e composição do registry.
         'src/modules/masterfila/**',
         'src/modules/agenda/**',

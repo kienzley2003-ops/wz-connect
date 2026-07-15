@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { login, fetchSession, type Session } from './lib/api.js';
+import type { DashboardResponse } from '@wz/shared';
+import { login, fetchSession, fetchDashboard, type Session } from './lib/api.js';
 import { ModuleNav } from './components/ModuleNav.js';
+import { Dashboard } from './components/Dashboard.js';
 
 const TOKEN_KEY = 'wz_connect_token';
 
 export function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [session, setSession] = useState<Session | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const signOut = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setSession(null);
+    setDashboard(null);
   }, []);
 
   useEffect(() => {
@@ -29,6 +33,22 @@ export function App() {
       active = false;
     };
   }, [token, signOut]);
+
+  // Painel só faz sentido com tenant resolvido (token de plataforma não tem métricas).
+  useEffect(() => {
+    if (!token || !session?.tenant) return;
+    let active = true;
+    fetchDashboard(token)
+      .then((d) => {
+        if (active) setDashboard(d);
+      })
+      .catch(() => {
+        // Painel indisponível não deve derrubar o console.
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, session?.tenant]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,11 +108,19 @@ export function App() {
           Sair
         </button>
       </aside>
-      <main className="flex-1 p-8">
-        <h2 className="text-2xl font-semibold">Console</h2>
-        <p className="mt-2 text-slate-400">
-          Módulos habilitados: {session.mods.length > 0 ? session.mods.join(', ') : 'nenhum'}
-        </p>
+      <main className="flex-1 space-y-6 p-8">
+        <div>
+          <h2 className="text-2xl font-semibold">Console</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Módulos habilitados: {session.mods.length > 0 ? session.mods.join(', ') : 'nenhum'}
+          </p>
+        </div>
+        {session.tenant && (
+          <section>
+            <h3 className="mb-3 text-lg font-semibold">Painel (últimas 24h)</h3>
+            <Dashboard data={dashboard} />
+          </section>
+        )}
       </main>
     </div>
   );

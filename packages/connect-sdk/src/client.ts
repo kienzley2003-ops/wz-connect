@@ -1,8 +1,10 @@
 import { JwksCache } from './jwks-cache.js';
 import { verifyToken } from './verify.js';
 import { checkEntitlement } from './entitlements.js';
+import { reportMetrics } from './metrics.js';
 import { hasModule, requireModule, tenantOf } from './modules.js';
 import type { ConnectClaims, EntitlementQuery, EntitlementResult } from './types.js';
+import type { MetricSnapshot } from '@wz/shared';
 
 export interface ConnectClientOptions {
   /** Base URL do Connect (ex.: `https://connect.wz.com`). */
@@ -27,6 +29,8 @@ export interface ConnectClient {
   tenantOf(claims: ConnectClaims): string | null;
   /** Decisão fresca de entitlement no CORE (uma chamada de rede). */
   checkEntitlement(token: string, query: EntitlementQuery): Promise<EntitlementResult>;
+  /** Empurra snapshots de métricas para o painel consolidado (BI por push). */
+  reportMetrics(token: string, snapshots: readonly MetricSnapshot[]): Promise<number>;
 }
 
 /**
@@ -54,5 +58,7 @@ export function createConnectClient(options: ConnectClientOptions): ConnectClien
     requireModule,
     tenantOf,
     checkEntitlement: (token, query) => checkEntitlement(token, query, { baseUrl, fetch: fetchFn }),
+    reportMetrics: (token, snapshots) =>
+      reportMetrics(token, snapshots, { baseUrl, fetch: fetchFn }),
   };
 }

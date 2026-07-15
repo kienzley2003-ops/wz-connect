@@ -1,3 +1,5 @@
+import type { DashboardResponse } from '@wz/shared';
+
 export interface Session {
   readonly id: string;
   readonly email: string;
@@ -30,4 +32,13 @@ export async function fetchSession(token: string): Promise<Session> {
   const res = await fetch('/auth/me', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(await errorCode(res));
   return (await res.json()) as Session;
+}
+
+/** Painel consolidado do tenant (BI). */
+export async function fetchDashboard(token: string): Promise<DashboardResponse> {
+  const res = await fetch('/dashboard?granularity=hour&periods=24', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await errorCode(res));
+  return (await res.json()) as DashboardResponse;
 }

@@ -22,13 +22,21 @@ Os demais sistemas (`wz-masterfila`, `wz-desk`, `wz-orc`, futuros) **não mantê
 
 **Estado atual dos consumidores (2026-08-05):**
 
-| Sistema | Auth hoje | Tenancy hoje | SDK Connect |
-|---|---|---|---|
-| `wz-masterfila` | próprio (JWT + lockout + sessão única) | multi-tenant via `organizacao_id` + vault local | consome `@wz/connect-sdk` via tarball vendor |
-| `wz-desk` | valida JWT Connect (HS256, mesmo `JWT_SECRET`) | single-tenant-ready via `companyId` | ainda não consome (dependência futura) |
-| `wz-orc` | senha única `WZ_ORC_SENHA` (ADR 0014) | single-tenant funcional, `organizacao_id` em toda tabela | ainda não consome (SSO já previsto ADR 0007) |
+| Sistema | Auth hoje | Tenancy hoje | SDK Connect | Maturidade |
+|---|---|---|---|---|
+| `wz-masterfila` | próprio (JWT + lockout + sessão única) | multi-tenant via `organizacao_id` + vault local | consome `@wz/connect-sdk` via tarball vendor | interno, em dev |
+| `wz-desk` | valida JWT Connect (HS256, mesmo `JWT_SECRET`) | single-tenant-ready via `companyId` | ainda não consome (dependência futura) | interno, em dev |
+| `wz-orc` | senha única `WZ_ORC_SENHA` (ADR 0014) | single-tenant funcional, `organizacao_id` em toda tabela | ainda não consome (SSO já previsto ADR 0007) | **produção v0.1.0** |
+| `wz-agente` | JWT 15min + refresh opaco rotativo + CSRF + MFA TOTP + lockout (ADR 005) | multi-tenant via `organization_id` próprio | ainda não consome | **mais maduro** (14 ADRs, 135 testes, agente Go) |
 
-wz-orc já está em produção (`v0.1.0`). wz-desk e wz-masterfila são internos / em desenvolvimento.
+**wz-agente é o projeto de referência** para decisões de auth. Seu ADR 005 já resolveu metade das questões que tínhamos em aberto. Toda decisão de auth do Connect deve herdar o padrão wz-agente — não reinventar.
+
+Detalhamento por sistema e lista de pendências específicas:
+
+- `wz-masterfila-pendencias.md` (na raiz)
+- `wz-desk-pendencias.md` (na raiz)
+- `wz-orc-pendencias.md` (na raiz)
+- `wz-agente-pendencias.md` (na raiz)
 
 ---
 
@@ -207,20 +215,74 @@ Pendências já identificadas — **sem aplicar ainda**:
 
 ## 7. Perguntas em aberto (a decidir antes de codar)
 
-1. **Refresh tokens ou sessão única?** O masterfila já usa sessão única com `sessaoId` no token. Manter ou evoluir para refresh token?
-2. **MFA** entra no MVP ou fica para fase 2?
-3. **Billing real** entra no MVP ou só modelo de planos + flags (integração externa depois)?
-4. **Super-admin do hub** mora no mesmo banco ou em schema/cluster separado?
-5. **Resolução de tenant por subdomínio** — Connect assume 100% ou masterfila mantém fallback via `BASE_DOMAIN`?
-6. **Catálogo de produtos** é hardcoded no código ou dinâmico em banco? (Sugestão: dinâmico, com seed inicial.)
-7. **Rate limiting por org** ou global? (Sugestão: global + override por plano.)
-8. **Auditoria cross-module** — cada módulo escreve direto no Connect via SDK, ou manda evento e Connect persiste?
+> **Legenda:** ✅ = resolvido / decidido. 🔄 = em discussão ou aguardando você. ⏳ = respondida em texto, será marcada ✅ após validação na §8.
+
+| # | Pergunta | Status | Resposta / proposta |
+|---|---|---|---|
+| 1 | Refresh tokens ou sessão única? | ✅ Herdado | Access JWT 15min + refresh opaco rotativo 7 dias + CSRF double-submit. Refresh rotaciona a cada uso. |
+| 2 | MFA no MVP? | ✅ Herdado | Sim, TOTP pure Node.js RFC 6238. Opcional por user, obrigatório para `owner` da org e `super_admin` do hub. |
+| 3 | Billing real no MVP? | ✅ Decidido | **Stripe** desde o dia 1. Webhook obrigatório. |
+| 4 | Super-admin do hub em banco separado? | ✅ Decidido | **Mesmo banco**, role global `super_admin` (sem `organizationId`). |
+| 5 | Resolução de tenant por subdomínio 100% no Connect? | ✅ Decidido | **Sim, 100% no Connect.** Subdomínio é o caminho principal; `BASE_DOMAIN` legado dos módulos continua existindo só por compatibilidade transitória. |
+| 6 | Catálogo de produtos dinâmico ou hardcoded? | ✅ Decidido | **Dinâmico em banco**, com seed inicial. Justificativa: teremos vários outros serviços depois. |
+| 7 | Rate limit global ou por org? | ✅ Decidido | **Global** no MVP (200/min global + 10/min em `/auth/login`). Override por plano fica para v1.1. |
+| 8 | Auditoria direta ou via evento? | ✅ Herdado | **Direto** via SDK. |
+| 9 | Plano Free existe? | ✅ Decidido | **Sim, com limites apertados**: 1 usuário, 100 tickets/mês, 50 orçamentos/mês, 1 agente. (valores calibráveis via seed) |
+| 10 | Trial? | ✅ Decidido | **14 dias com cartão**. Stripe gerencia. |
+| 11 | Downgrade imediato ou agendado? | ✅ Decidido | **Agendado para fim do ciclo**. |
+| 12 | Nota fiscal BR? | ✅ Decidido | **Sim, desde o dia 1.** Integração com **NFe.io**. Emitida **após cada invoice paga** do Stripe. Job assíncrono no worker, plug já preparado para também ser exposto como endpoint interno (v1.1: admin faz refund direto da UI do Connect, sem precisar abrir Stripe Dashboard). |
+| 13 | Multi-moeda? | ✅ Decidido | **Só BRL no MVP**, sem multi-moeda. |
+| 14 | Worker é app separado? | ✅ Decidido | **Sim** (BullMQ + Redis), wz-agente já tem padrão similar. |
+| 15 | Worker e backend compartilham DB? | 🔄 **Em discussão** | Ver §7.1 abaixo — precisa da sua escolha. |
+| 16 | Lockout duration | ✅ Herdado | **5 falhas / 30min**. |
+| 17 | Hash de senha | ✅ Herdado | **bcryptjs puro JS**. |
+| 18 | CSRF strategy | ✅ Herdado | **Double-submit cookie**. |
+| 19 | Hub Admin: dashboard global no MVP? | ✅ Decidido | **Sim, dashboard global completo.** Ninguém gosta de tela simples. |
+| 20 | Org Admin: gráfico de uso vs limites no MVP? | ✅ Decidido | **MVP pode ser o mais simples (plano + próxima cobrança)**, mas deixar **plugs prontos** para v1.1 já expor consumo na tela de assinatura. |
+| 21 | Onboarding wizard: 5 passos são suficientes? | ✅ Decidido | **Sim, quanto mais simples melhor a conversão.** Restante se coleta depois (segmento, tamanho da empresa, telefone) em pesquisa opcional após onboarding, nunca como bloqueante. |
+| 22 | Master pode impersonar org? | ✅ Decidido | **Sim**, com flag visual gigante "você está impersonando X" + toda ação registrada em auditoria com `impersonatedBy`. |
+| 23 | Feature flags por org? | ✅ Decidido | **Sim, no MVP**, tabela `feature_flags` simples. |
+| 24 | TLS em dev? | ✅ Decidido | **HTTP puro em local**, **HTTPS (Caddy + cert auto-assinado) só em homologação/produção**. |
+| 25 | Backup do Postgres? | ✅ Decidido | **pg_dump diário** (retenção 30 dias) + snapshot antes de migrations destrutivas. |
+| 26 | Observabilidade? | ✅ Decidido | **Pino (logs) + OpenTelemetry tracing desde o dia 1**. |
+| 27 | CDN? | ✅ Decidido | **Cloudflare**. |
+| 28 | Hospedagem? | ✅ Decidido | **Self-hosted** (Docker no VPS do usuário). |
+| 29 | Multi-moeda? | ✅ Decidido | **Não.** Só BRL. |
+| 30 | Estorno/refund pelo Connect ou Stripe Dashboard? | ✅ Decidido | **MVP: admin faz no Stripe Dashboard.** Mas **plug já fica preparado** para v1.1: endpoint Connect com permissão de refund Stripe + UI interna. |
+
+### 7.1 Worker: compartilhar DB com backend ou separar?
+
+**Argumentos a favor de compartilhar DB (mesmo Postgres, tabelas separadas por schema):**
+
+- ✅ Mais simples de operar (1 backup, 1 monitoramento, 1 connection pool)
+- ✅ Transações entre worker e backend funcionam nativamente (join entre `worker_*` e `core_*`)
+- ✅ Custo: 1 Postgres só (Cloud Postgres cobra por instância)
+- ✅ wz-agente já faz assim (background jobs no mesmo banco)
+- ❌ Se um job mal escrito segurar lock pesado, pode atrasar o backend
+
+**Argumentos a favor de separar (2 databases):**
+
+- ✅ Isolamento total: bug no worker não toca o backend
+- ✅ Pode escalar o worker independentemente (read replicas dedicadas)
+- ✅ Permite migrar worker para Postgres separado no futuro sem mudar app (mesma lib)
+- ❌ Custo: 2× (Cloud Postgres é o item mais caro na AWS/Railway; self-hosted dobra RAM/disk)
+- ❌ Sem FK cross-database — tabelas compartilhadas (audit, idempotency keys) viram duplicação ou HTTP interno
+- ❌ Mais um Postgres pra monitorar, fazer backup, atualizar
+
+**Minha sugestão: compartilhar DB** com tabelas do worker em schema separado (`worker_*`). É o caminho mais simples, o wz-agente já usa, e a separação por schema dá o isolamento lógico que 95% dos casos precisa. Se precisar separar físico depois, migração é viável porque tabelas do worker são poucas e bem definidas.
+
+**Custos estimados (self-hosted, mesma máquina):**
+
+- Compartilhar: 1 Postgres, +0% no custo de infra
+- Separar: 2 Postgres, ~+30–50% no custo de infra (mais RAM, mais disco, mais backup)
+
+**Qual você prefere?** (Se aceitar minha sugestão, responda "compartilhar" e seguimos.)
 
 ---
 
 ## 8. Próximos passos sugeridos
 
-1. Responder as 8 perguntas acima
+1. ~~Responder as perguntas acima~~ ✅ Quase tudo decidido (só falta #15 sobre worker/DB compartilhado)
 2. Definir o **MVP** (corte de funcionalidades)
 3. Gerar ADRs:
    - ADR-001: Stack Fastify + Drizzle + Postgres
@@ -230,6 +292,11 @@ Pendências já identificadas — **sem aplicar ainda**:
    - ADR-005: Planos & limites (modelo de dados)
    - ADR-006: Single-session enforcement
    - ADR-007: Auditoria central
+   - ADR-008: Billing Stripe + webhook
+   - ADR-009: NF-e via NFe.io (job assíncrono)
+   - ADR-010: Worker compartilhando DB com backend (decisão pendente)
+   - ADR-011: Defensência em camadas
+   - ADR-012: Observabilidade Pino + OTEL
 4. Modelar schema Drizzle das tabelas core
 5. Só então começar o código
 
@@ -241,4 +308,12 @@ Pendências já identificadas — **sem aplicar ainda**:
 
 - **(2026-08-05)** Decidido: wz-connect será o sistema **Auth + Tenancy + Catálogo/Planos** do wz-hub; demais sistemas consomem via SDK.
 - **(2026-08-05)** Decidido: layout **pnpm monorepo** (apps/backend + apps/frontend + packages/shared + packages/connect-sdk).
-- **(2026-08-05)** Pendente: stack final depende das decisões de escopo acima (provavelmente Fastify + Drizzle, mesma stack padrão).
+- **(2026-08-05)** wz-orc entrou no diretório wz-hub (`v0.1.0`, single-tenant, senha única). Registrado em `wz-orc-pendencias.md`.
+- **(2026-08-05)** **wz-agente entrou no diretório wz-hub.** É o projeto mais maduro (14 ADRs, 135 testes, agente Go para Windows). Seu ADR 005 serve de **referência obrigatória** para decisões de auth no Connect. Decisões herdadas:
+  - Auth = access JWT 15min + refresh opaco rotativo 7 dias + CSRF double-submit
+  - MFA TOTP pure Node.js (RFC 6238), opcional por user
+  - Lockout 5 falhas / 30min
+  - Hash de senha = bcryptjs puro JS
+  - Auditoria direta via SDK
+  - mTLS dos agentes Windows **permanece no wz-agente** (específico, não sai do projeto)
+- **(2026-08-05)** Consolidação das decisões de produto do usuário (NF-e desde o dia 1 via NFe.io, BRL only, self-hosted, Cloudflare, Pino + OTEL, dashboard global no MVP, etc.). 28/30 decisões fechadas; resta apenas #15 (worker compartilhar DB com backend ou separar). Análise completa em §7 e §7.1.

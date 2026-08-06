@@ -276,29 +276,30 @@ Pendências já identificadas — **sem aplicar ainda**:
 - Compartilhar: 1 Postgres, +0% no custo de infra
 - Separar: 2 Postgres, ~+30–50% no custo de infra (mais RAM, mais disco, mais backup)
 
-**Qual você prefere?** (Se aceitar minha sugestão, responda "compartilhar" e seguimos.)
+**Decisão do usuário: compartilhar.** ✅ Fechado — ver ADR-0011.
 
 ---
 
 ## 8. Próximos passos sugeridos
 
-1. ~~Responder as perguntas acima~~ ✅ Quase tudo decidido (só falta #15 sobre worker/DB compartilhado)
-2. Definir o **MVP** (corte de funcionalidades)
-3. Gerar ADRs:
-   - ADR-001: Stack Fastify + Drizzle + Postgres
-   - ADR-002: pnpm monorepo com SDK como workspace
-   - ADR-003: Modelo de tenancy (subdomain resolver + JWT)
-   - ADR-004: Entitlements (products[] no token + checagem via SDK)
-   - ADR-005: Planos & limites (modelo de dados)
-   - ADR-006: Single-session enforcement
-   - ADR-007: Auditoria central
-   - ADR-008: Billing Stripe + webhook
-   - ADR-009: NF-e via NFe.io (job assíncrono)
-   - ADR-010: Worker compartilhando DB com backend (decisão pendente)
-   - ADR-011: Defensência em camadas
-   - ADR-012: Observabilidade Pino + OTEL
-4. Modelar schema Drizzle das tabelas core
-5. Só então começar o código
+1. ~~Responder as perguntas acima~~ ✅ 30/30 decisões fechadas.
+2. ~~Gerar ADRs~~ ✅ **13 ADRs escritas** em `docs/adr/0001` a `0013` (+ índice em `docs/adr/README.md`):
+   - [0001](docs/adr/0001-fastify-drizzle-postgres.md) — Stack Fastify + Drizzle + Postgres
+   - [0002](docs/adr/0002-pnpm-monorepo-sdk-workspace.md) — pnpm monorepo com SDK publicável
+   - [0003](docs/adr/0003-tenancy-subdominio-jwt.md) — Tenancy via subdomínio + JWT
+   - [0004](docs/adr/0004-auth-jwt-refresh-csrf-mfa-lockout.md) — Auth (herdado do wz-agente ADR 005)
+   - [0005](docs/adr/0005-entitlements-products-no-token.md) — Entitlements via `products[]` no token
+   - [0006](docs/adr/0006-planos-e-limites.md) — Planos e limites
+   - [0007](docs/adr/0007-single-session-enforcement.md) — Single-session enforcement
+   - [0008](docs/adr/0008-auditoria-central.md) — Auditoria central (com impersonation)
+   - [0009](docs/adr/0009-billing-stripe-webhook.md) — Billing via Stripe + webhook
+   - [0010](docs/adr/0010-nfe-via-nfeio.md) — Nota fiscal via NFe.io
+   - [0011](docs/adr/0011-worker-compartilhando-db.md) — Worker compartilhando DB com backend
+   - [0012](docs/adr/0012-seguranca-em-camadas.md) — Segurança em camadas
+   - [0013](docs/adr/0013-observabilidade-pino-otel.md) — Observabilidade Pino + OTEL
+3. ✅ **Schema Drizzle modelado** em `apps/backend/src/db/schema.ts` — tabelas core (organizations, users, memberships, products, plans, plan_products, subscriptions, invoices, payments, refresh_tokens, sessions, audit_events, feature_flags, invites, webhook_events) + schema `worker_*`. **Sem migrations ainda** — aguarda scaffold do monorepo (`package.json`, `pnpm-workspace.yaml`, `drizzle.config.ts`).
+4. Próximo passo real: **definir o MVP** (corte de funcionalidades para a primeira versão navegável) e então **scaffold do monorepo** (package.json, pnpm-workspace.yaml, docker-compose.yml, drizzle.config.ts, primeira migration).
+5. Só então código de implementação (rotas, services, middlewares).
 
 ---
 

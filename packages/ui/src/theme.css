@@ -1,0 +1,31 @@
+/**
+ * Design system do wz-hub — traduzido de wz-agente/apps/frontend (Tailwind 3.4)
+ * para o modelo CSS-first do Tailwind 4. Ver docs/design-system.md para a
+ * anatomia completa de cada componente.
+ *
+ * Uso: `@import "@wz/ui/theme.css";` logo após `@import "tailwindcss";` no
+ * CSS de entrada de cada app consumidor.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Ação primária — blue-600 do Tailwind padrão */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+
+  /* Semântica de status — pares light/dark ficam nas classes utilitárias
+     (bg-green-100/dark:bg-green-500/15 etc.), estes tokens existem para
+     referência e para uso em contextos sem par light/dark (ex.: gráficos). */
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-warning: #d97706;
+  --color-info: #2563eb;
+
+  /* Neutros — slate do Tailwind padrão, nomeado semanticamente */
+  --color-surface: #ffffff;
+  --color-surface-dark: #1e293b;
+  --color-sidebar: #1e293b;
+  --color-bg: #f1f5f9;
+  --color-bg-dark: #0f172a;
+}

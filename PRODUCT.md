@@ -33,10 +33,10 @@ Os demais sistemas (`wz-masterfila`, `wz-desk`, `wz-orc`, futuros) **não mantê
 
 Detalhamento por sistema e lista de pendências específicas:
 
-- `wz-masterfila-pendencias.md` (na raiz)
-- `wz-desk-pendencias.md` (na raiz)
-- `wz-orc-pendencias.md` (na raiz)
-- `wz-agente-pendencias.md` (na raiz)
+- `docs/pendencias/wz-masterfila-pendencias.md`
+- `docs/pendencias/wz-desk-pendencias.md`
+- `docs/pendencias/wz-orc-pendencias.md`
+- `docs/pendencias/wz-agente-pendencias.md`
 
 ---
 
@@ -309,7 +309,7 @@ Pendências já identificadas — **sem aplicar ainda**:
 
 - **(2026-08-05)** Decidido: wz-connect será o sistema **Auth + Tenancy + Catálogo/Planos** do wz-hub; demais sistemas consomem via SDK.
 - **(2026-08-05)** Decidido: layout **pnpm monorepo** (apps/backend + apps/frontend + packages/shared + packages/connect-sdk).
-- **(2026-08-05)** wz-orc entrou no diretório wz-hub (`v0.1.0`, single-tenant, senha única). Registrado em `wz-orc-pendencias.md`.
+- **(2026-08-05)** wz-orc entrou no diretório wz-hub (`v0.1.0`, single-tenant, senha única). Registrado em `docs/pendencias/wz-orc-pendencias.md`.
 - **(2026-08-05)** **wz-agente entrou no diretório wz-hub.** É o projeto mais maduro (14 ADRs, 135 testes, agente Go para Windows). Seu ADR 005 serve de **referência obrigatória** para decisões de auth no Connect. Decisões herdadas:
   - Auth = access JWT 15min + refresh opaco rotativo 7 dias + CSRF double-submit
   - MFA TOTP pure Node.js (RFC 6238), opcional por user

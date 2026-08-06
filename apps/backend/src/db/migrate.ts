@@ -1,7 +1,10 @@
-import 'dotenv/config'
+import { config } from 'dotenv'
+import { resolve } from 'path'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import pg from 'pg'
+
+config({ path: resolve(process.cwd(), '../../.env') })
 
 async function main() {
   if (!process.env.DATABASE_URL) {

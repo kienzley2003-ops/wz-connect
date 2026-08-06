@@ -64,7 +64,7 @@ pnpm dev
 - Backend: `http://localhost:3000` (health check em `/api/v1/health`, Swagger em `/api/v1/docs`)
 - Frontend: `http://localhost:3002` (`/hub` para Hub Admin, `/app` para Org Admin)
 - Postgres: `localhost:5435` (evita conflito com wz-masterfila `5433`, wz-desk/wz-agente `5432`, wz-orc `5434`)
-- Redis: `localhost:6380`
+- Redis: `localhost:6381`
 
 ### Comandos úteis
 

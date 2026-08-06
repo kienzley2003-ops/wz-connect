@@ -83,11 +83,11 @@ pnpm --filter @wz/connect-backend db:migrate   # aplica migrations pendentes
 - ✅ Schema Drizzle core modelado (`apps/backend/src/db/schema.ts`) — 15 tabelas + schema `worker`
 - ✅ Design system extraído do `wz-agente` e portado para `@wz/ui`
 - ✅ Scaffold do monorepo rodável (backend, worker, frontend sobem sem erro; primeira migration gerada em `apps/backend/drizzle/0000_cooing_skullbuster.sql`)
-- ⏳ Rotas de negócio (auth, billing, onboarding) — em desenvolvimento paralelo em duas frentes, ver plano de divisão do MVP
+- ⏳ Rotas de negócio (auth, billing, onboarding) — em desenvolvimento paralelo em duas frentes, ver [`docs/plano-divisao-mvp.md`](docs/plano-divisao-mvp.md)
 
 ## Desenvolvimento em duas frentes
 
-O MVP está dividido em duas frentes paralelas, cada uma fullstack, para trabalho simultâneo por dois desenvolvedores:
+O MVP está dividido em duas frentes paralelas, cada uma fullstack, para trabalho simultâneo por dois desenvolvedores. **Ver [`docs/plano-divisao-mvp.md`](docs/plano-divisao-mvp.md) para o detalhamento completo** (endpoints, telas, contrato entre frentes, regras de convivência).
 
 - **`feature/auth-tenancy-core`** — Auth, tenancy, sessões, MFA, auditoria, impersonation (ADRs 0003, 0004, 0007, 0008)
 - **`feature/billing-plans-catalog`** — Planos, catálogo, Stripe, NF-e, worker (ADRs 0005, 0006, 0009, 0010, 0011)

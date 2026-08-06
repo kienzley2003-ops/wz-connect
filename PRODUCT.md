@@ -297,9 +297,11 @@ Pendências já identificadas — **sem aplicar ainda**:
    - [0011](docs/adr/0011-worker-compartilhando-db.md) — Worker compartilhando DB com backend
    - [0012](docs/adr/0012-seguranca-em-camadas.md) — Segurança em camadas
    - [0013](docs/adr/0013-observabilidade-pino-otel.md) — Observabilidade Pino + OTEL
-3. ✅ **Schema Drizzle modelado** em `apps/backend/src/db/schema.ts` — tabelas core (organizations, users, memberships, products, plans, plan_products, subscriptions, invoices, payments, refresh_tokens, sessions, audit_events, feature_flags, invites, webhook_events) + schema `worker_*`. **Sem migrations ainda** — aguarda scaffold do monorepo (`package.json`, `pnpm-workspace.yaml`, `drizzle.config.ts`).
-4. Próximo passo real: **definir o MVP** (corte de funcionalidades para a primeira versão navegável) e então **scaffold do monorepo** (package.json, pnpm-workspace.yaml, docker-compose.yml, drizzle.config.ts, primeira migration).
-5. Só então código de implementação (rotas, services, middlewares).
+3. ✅ **Schema Drizzle modelado** em `apps/backend/src/db/schema.ts` — 15 tabelas core + schema `worker` (2 tabelas). Migration inicial gerada e testada contra Postgres real.
+4. ✅ **Design system extraído do wz-agente** — `docs/design-system.md` + pacote `packages/ui` (`@wz/ui`), traduzido para Tailwind 4/React 19.
+5. ✅ **Scaffold do monorepo pronto e rodável** — `pnpm install`, `docker compose up -d`, `pnpm --filter @wz/connect-backend db:migrate`, `pnpm dev` funcionam de ponta a ponta (validado contra Postgres/Redis reais).
+6. ✅ **MVP dividido em 2 frentes paralelas** — ver `docs/plano-divisao-mvp.md` para o detalhamento completo (endpoints, telas, contrato entre frentes, regras de convivência, branches `feature/auth-tenancy-core` e `feature/billing-plans-catalog`).
+7. Próximo passo real: **implementação** — cada frente segue seu detalhamento em `docs/plano-divisao-mvp.md`.
 
 ---
 

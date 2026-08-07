@@ -20,6 +20,7 @@ export default defineConfig({
         'src/server.ts',
         'src/db/migrate.ts',
         'src/db/schema.ts',
+        'src/test-utils/**',
       ],
       thresholds: {
         lines: 85,

@@ -48,3 +48,31 @@ export async function createOrRotateSession(
     { isolationLevel: 'serializable' }
   )
 }
+
+export async function revokeSession(db: Db, sessionId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId))
+    await tx
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.sessionId, sessionId), isNull(refreshTokens.revokedAt)))
+  })
+}
+
+export async function rotateRefreshToken(db: Db, sessionId: string, userId: string): Promise<string> {
+  return db.transaction(async (tx) => {
+    await tx
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.sessionId, sessionId), isNull(refreshTokens.revokedAt)))
+
+    const refreshTokenPlain = generateRefreshToken()
+    await tx.insert(refreshTokens).values({
+      userId,
+      sessionId,
+      tokenHash: hashRefreshToken(refreshTokenPlain),
+      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+    })
+    return refreshTokenPlain
+  })
+}

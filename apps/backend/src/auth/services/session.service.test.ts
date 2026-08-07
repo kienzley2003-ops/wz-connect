@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { eq, isNull, and, sql } from 'drizzle-orm'
 import { createDb, type Db } from '../../db/client.js'
 import { organizations, users, sessions, refreshTokens } from '../../db/schema.js'
-import { createOrRotateSession } from './session.service.js'
+import { createOrRotateSession, revokeSession, rotateRefreshToken } from './session.service.js'
 import { hashRefreshToken } from '../lib/refresh-token.js'
 import { env } from '../../env.js'
 
@@ -87,5 +87,37 @@ describe('createOrRotateSession', () => {
       .from(sessions)
       .where(and(eq(sessions.userId, user.id), eq(sessions.organizationId, org.id), isNull(sessions.revokedAt)))
     expect(active).toHaveLength(1)
+  })
+})
+
+describe('revokeSession', () => {
+  it('revoga a sessão e seu refresh token ativo', async () => {
+    const { org, user } = await seedUserAndOrg()
+    const { sessionId } = await createOrRotateSession(db, user.id, org.id)
+
+    await revokeSession(db, sessionId)
+
+    const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId))
+    expect(session.revokedAt).not.toBeNull()
+    const [refresh] = await db.select().from(refreshTokens).where(eq(refreshTokens.sessionId, sessionId))
+    expect(refresh.revokedAt).not.toBeNull()
+  })
+})
+
+describe('rotateRefreshToken', () => {
+  it('revoga o refresh token antigo e cria um novo para a mesma sessão, sem revogar a sessão', async () => {
+    const { org, user } = await seedUserAndOrg()
+    const { sessionId, refreshToken: oldToken } = await createOrRotateSession(db, user.id, org.id)
+
+    const newToken = await rotateRefreshToken(db, sessionId, user.id)
+
+    expect(newToken).not.toBe(oldToken)
+    const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId))
+    expect(session.revokedAt).toBeNull()
+
+    const rows = await db.select().from(refreshTokens).where(eq(refreshTokens.sessionId, sessionId))
+    const active = rows.filter((r) => r.revokedAt === null)
+    expect(active).toHaveLength(1)
+    expect(active[0].tokenHash).toBe(hashRefreshToken(newToken))
   })
 })

@@ -8,6 +8,13 @@
       "when": 1785979239515,
       "tag": "0000_cooing_skullbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786107215844,
+      "tag": "0001_sessions_organization_id_nullable",
+      "breakpoints": true
     }
   ]
 }

@@ -81,3 +81,9 @@ export class InsufficientRoleError extends AppError {
     super('insufficient-role', 403, 'Seu papel não tem permissão para esta ação')
   }
 }
+
+export class UnauthenticatedError extends AppError {
+  constructor() {
+    super('unauthenticated', 401, 'Autenticação necessária')
+  }
+}

@@ -13,6 +13,7 @@ import {
   ImpersonationForbiddenError,
   CrossOrgAccessError,
   InsufficientRoleError,
+  UnauthenticatedError,
 } from './errors.js'
 
 describe('AppError', () => {
@@ -89,5 +90,11 @@ describe('subclasses de AppError', () => {
     const err = new InsufficientRoleError()
     expect(err.code).toBe('insufficient-role')
     expect(err.statusCode).toBe(403)
+  })
+
+  it('UnauthenticatedError usa status 401', () => {
+    const err = new UnauthenticatedError()
+    expect(err.code).toBe('unauthenticated')
+    expect(err.statusCode).toBe(401)
   })
 })

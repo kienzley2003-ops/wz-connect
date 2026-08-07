@@ -12,6 +12,7 @@ import {
   NotAMemberError,
   ImpersonationForbiddenError,
   CrossOrgAccessError,
+  InsufficientRoleError,
 } from './errors.js'
 
 describe('AppError', () => {
@@ -82,5 +83,11 @@ describe('subclasses de AppError', () => {
 
   it('CrossOrgAccessError usa status 403', () => {
     expect(new CrossOrgAccessError().code).toBe('cross-org-access')
+  })
+
+  it('InsufficientRoleError usa status 403', () => {
+    const err = new InsufficientRoleError()
+    expect(err.code).toBe('insufficient-role')
+    expect(err.statusCode).toBe(403)
   })
 })

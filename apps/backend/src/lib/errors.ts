@@ -75,3 +75,9 @@ export class CrossOrgAccessError extends AppError {
     super('cross-org-access', 403, 'Acesso negado a recurso de outra organização')
   }
 }
+
+export class InsufficientRoleError extends AppError {
+  constructor() {
+    super('insufficient-role', 403, 'Seu papel não tem permissão para esta ação')
+  }
+}

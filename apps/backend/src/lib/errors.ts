@@ -87,3 +87,21 @@ export class UnauthenticatedError extends AppError {
     super('unauthenticated', 401, 'Autenticação necessária')
   }
 }
+
+export class SlugTakenError extends AppError {
+  constructor() {
+    super('slug-taken', 409, 'Este slug já está em uso por outra organização')
+  }
+}
+
+export class InviteInvalidError extends AppError {
+  constructor() {
+    super('invite-invalid', 404, 'Convite inválido ou expirado')
+  }
+}
+
+export class InviteEmailMismatchError extends AppError {
+  constructor() {
+    super('invite-email-mismatch', 403, 'O convite foi emitido para outro e-mail')
+  }
+}

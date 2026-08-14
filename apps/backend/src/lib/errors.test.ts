@@ -14,6 +14,9 @@ import {
   CrossOrgAccessError,
   InsufficientRoleError,
   UnauthenticatedError,
+  SlugTakenError,
+  InviteInvalidError,
+  InviteEmailMismatchError,
 } from './errors.js'
 
 describe('AppError', () => {
@@ -96,5 +99,23 @@ describe('subclasses de AppError', () => {
     const err = new UnauthenticatedError()
     expect(err.code).toBe('unauthenticated')
     expect(err.statusCode).toBe(401)
+  })
+
+  it('SlugTakenError usa status 409', () => {
+    const err = new SlugTakenError()
+    expect(err.code).toBe('slug-taken')
+    expect(err.statusCode).toBe(409)
+  })
+
+  it('InviteInvalidError usa status 404', () => {
+    const err = new InviteInvalidError()
+    expect(err.code).toBe('invite-invalid')
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('InviteEmailMismatchError usa status 403', () => {
+    const err = new InviteEmailMismatchError()
+    expect(err.code).toBe('invite-email-mismatch')
+    expect(err.statusCode).toBe(403)
   })
 })

@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import type { Db } from '../db/client.js'
-import { invites, memberships, users, organizations } from '../db/schema.js'
+import { invites, memberships, users, organizations, membershipRoleEnum } from '../db/schema.js'
 import { generateRefreshToken } from '../auth/lib/refresh-token.js'
 import { hashPassword } from '../auth/services/password.service.js'
 import { createOrRotateSession } from '../auth/services/session.service.js'
@@ -10,11 +10,13 @@ import { AppError, InviteInvalidError, InviteEmailMismatchError } from '../lib/e
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
+type MembershipRole = (typeof membershipRoleEnum.enumValues)[number]
+
 export async function createInvite(
   db: Db,
   organizationId: string,
   email: string,
-  role: string
+  role: MembershipRole
 ): Promise<{ token: string }> {
   const token = generateRefreshToken()
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS)

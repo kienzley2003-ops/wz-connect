@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm'
 import type { Db } from '../db/client.js'
-import { memberships } from '../db/schema.js'
+import { memberships, membershipRoleEnum } from '../db/schema.js'
 import { CrossOrgAccessError } from '../lib/errors.js'
+
+export type MembershipRole = (typeof membershipRoleEnum.enumValues)[number]
 
 export interface MembershipRow {
   id: string
@@ -20,7 +22,7 @@ export async function createMembership(
   db: Db,
   organizationId: string,
   userId: string,
-  role: string
+  role: MembershipRole
 ): Promise<MembershipRow> {
   const [row] = await db
     .insert(memberships)
@@ -33,7 +35,7 @@ export async function updateMembershipRole(
   db: Db,
   organizationId: string,
   membershipId: string,
-  role: string
+  role: MembershipRole
 ): Promise<MembershipRow> {
   const [existing] = await db.select().from(memberships).where(eq(memberships.id, membershipId)).limit(1)
   if (!existing || existing.organizationId !== organizationId) {

@@ -14,6 +14,9 @@ import { registerRefreshRoute } from './auth/routes/refresh.js'
 import { registerLogoutRoute } from './auth/routes/logout.js'
 import { registerMeRoute } from './auth/routes/me.js'
 import { registerMfaRoutes } from './auth/routes/mfa.js'
+import { registerOnboardingRoute } from './onboarding/routes.js'
+import { registerMembershipsRoutes } from './memberships/routes.js'
+import { registerInvitesRoutes } from './invites/routes.js'
 import { AppError } from './lib/errors.js'
 
 const API = '/api/v1'
@@ -95,6 +98,9 @@ await registerRefreshRoute(app, db)
 await registerLogoutRoute(app, db)
 await registerMeRoute(app, db)
 await registerMfaRoutes(app, db)
+await registerOnboardingRoute(app, db)
+await registerMembershipsRoutes(app, db)
+await registerInvitesRoutes(app, db)
 
 const port = env.PORT
 app.listen({ port, host: '0.0.0.0' }).catch((err) => {

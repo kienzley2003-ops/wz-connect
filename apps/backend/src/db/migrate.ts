@@ -4,7 +4,14 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import pg from 'pg'
 
-config({ path: resolve(process.cwd(), '../../.env') })
+// Mesmo padrão de carregamento em camadas do env.ts: NODE_ENV=test aponta
+// para o banco de teste (wz_connect_test) em vez do banco de dev — útil
+// para migrar o banco de teste depois de adicionar uma migration nova.
+const ROOT = resolve(process.cwd(), '../..')
+config({ path: resolve(ROOT, '.env') })
+if (process.env.NODE_ENV === 'test') {
+  config({ path: resolve(ROOT, '.env.test'), override: true })
+}
 
 async function main() {
   if (!process.env.DATABASE_URL) {

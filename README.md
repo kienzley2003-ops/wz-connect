@@ -65,13 +65,15 @@ pnpm install
 
 # 2. Copiar variáveis de ambiente
 cp .env.example .env
+cp .env.test.example .env.test
 # Editar .env se necessário (valores padrão já funcionam em dev local)
 
 # 3. Subir Postgres + Redis
 pnpm infra:up
 
-# 4. Aplicar a primeira migration
+# 4. Aplicar a primeira migration (banco de dev + banco de teste)
 pnpm --filter @wz/connect-backend db:migrate
+NODE_ENV=test pnpm --filter @wz/connect-backend db:migrate
 
 # 5. Rodar tudo em modo dev (backend + worker + frontend)
 pnpm dev
@@ -79,7 +81,7 @@ pnpm dev
 
 - Backend: `http://localhost:3000` (health check em `/api/v1/health`, Swagger em `/api/v1/docs`)
 - Frontend: `http://localhost:3002` (`/hub` para Hub Admin, `/app` para Org Admin)
-- Postgres: `localhost:5435` (evita conflito com wz-masterfila `5433`, wz-desk/wz-agente `5432`, wz-orc `5434`)
+- Postgres: `localhost:5435` (evita conflito com wz-masterfila `5433`, wz-desk/wz-agente `5432`, wz-orc `5434`) — banco de dev `wz_connect`, banco de teste `wz_connect_test` (criado junto pelo `docker/init-test-db.sql`; `pnpm test` usa esse automaticamente, nunca toca no de dev)
 - Redis: `localhost:6381`
 
 ### Comandos úteis

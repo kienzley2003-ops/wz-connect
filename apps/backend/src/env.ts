@@ -2,7 +2,18 @@ import { config } from 'dotenv'
 import { resolve } from 'path'
 import { z } from 'zod'
 
-config({ path: resolve(process.cwd(), '../../.env') })
+const ROOT = resolve(process.cwd(), '../..')
+
+config({ path: resolve(ROOT, '.env') })
+
+// Vitest seta NODE_ENV=test automaticamente — quando isso acontece,
+// .env.test sobrepõe só o que ele definir (hoje, só DATABASE_URL), para
+// que a suíte de testes nunca escreva no banco de desenvolvimento. Ver
+// docs/superpowers/plans/2026-08-07-connect-session-tenancy-infra.md
+// linha 16: era assim que a troca para um banco dedicado já estava prevista.
+if (process.env.NODE_ENV === 'test') {
+  config({ path: resolve(ROOT, '.env.test'), override: true })
+}
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

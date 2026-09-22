@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3002,
       host: true,
+      // Sem isto, o Vite recusa (proteção contra DNS rebinding) qualquer
+      // Host fora de localhost/IP — bloqueando justamente os subdomínios de
+      // organização que o tenancy por subdomínio (ADR 0003) depende.
+      allowedHosts: [env.BASE_DOMAIN, `.${env.BASE_DOMAIN}`],
       proxy: {
         '/api': { target: API_TARGET, changeOrigin: false },
       },

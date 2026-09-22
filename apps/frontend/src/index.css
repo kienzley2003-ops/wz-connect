@@ -1,2 +1,11 @@
 @import "tailwindcss";
 @import "@wz/ui/theme.css";
+
+/*
+ * @wz/ui é consumido via workspace (symlink em node_modules), e a detecção
+ * automática de conteúdo do Tailwind v4 não atravessa esse link por padrão
+ * — sem isto, nenhuma classe usada só dentro de packages/ui/src (bg-primary,
+ * text-white, rounded-2xl, etc.) é gerada, e os componentes do design system
+ * renderizam sem estilo.
+ */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";

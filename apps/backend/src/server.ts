@@ -17,6 +17,11 @@ import { registerMfaRoutes } from './auth/routes/mfa.js'
 import { registerOnboardingRoute } from './onboarding/routes.js'
 import { registerMembershipsRoutes } from './memberships/routes.js'
 import { registerInvitesRoutes } from './invites/routes.js'
+import { registerAuditRoutes } from './audit/routes.js'
+import { registerImpersonationRoutes } from './impersonation/routes.js'
+import { registerOrganizationsRoutes } from './organizations/routes.js'
+import { registerUsersRoutes } from './users/routes.js'
+import { registerSessionsRoutes } from './sessions/routes.js'
 import { AppError } from './lib/errors.js'
 
 const API = '/api/v1'
@@ -101,6 +106,11 @@ await registerMfaRoutes(app, db)
 await registerOnboardingRoute(app, db)
 await registerMembershipsRoutes(app, db)
 await registerInvitesRoutes(app, db)
+await registerAuditRoutes(app, db)
+await registerImpersonationRoutes(app, db)
+await registerOrganizationsRoutes(app, db)
+await registerUsersRoutes(app, db)
+await registerSessionsRoutes(app, db)
 
 const port = env.PORT
 app.listen({ port, host: '0.0.0.0' }).catch((err) => {

@@ -1,0 +1,114 @@
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
+import { sql, eq } from 'drizzle-orm'
+import { createDb, type Db } from '../db/client.js'
+import { users, auditEvents } from '../db/schema.js'
+import { createOrRotateSession } from '../auth/services/session.service.js'
+import { createTokenService } from '../auth/services/token.service.js'
+import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { registerUsersRoutes } from './routes.js'
+import { buildTestApp } from '../test-utils/build-app.js'
+import { env } from '../env.js'
+
+let db: Db
+let pool: ReturnType<typeof createDb>['pool']
+
+beforeEach(async () => {
+  ;({ db, pool } = createDb(env.DATABASE_URL))
+  await db.execute(sql`TRUNCATE TABLE users, sessions, audit_events CASCADE`)
+})
+
+afterAll(async () => {
+  await pool.end()
+})
+
+async function seedSuperAdminSession() {
+  const [superAdmin] = await db
+    .insert(users)
+    .values({ email: 'root@wz.com', passwordHash: 'x', isSuperAdmin: true })
+    .returning()
+  const { sessionId } = await createOrRotateSession(db, superAdmin.id, null)
+  return { superAdmin, sessionId }
+}
+
+describe('GET /api/v1/users', () => {
+  it('super_admin lista todos os usuários: 200', async () => {
+    const { superAdmin, sessionId } = await seedSuperAdminSession()
+    const app = await buildTestApp(db, (a) => registerUsersRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: superAdmin.id, org: null, role: 'super_admin', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/users',
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toHaveLength(1)
+    await app.close()
+  })
+
+  it('rejeita com 403 quando o requester não é super_admin', async () => {
+    const [user] = await db.insert(users).values({ email: 'a@acme.com', passwordHash: 'x' }).returning()
+    const { sessionId } = await createOrRotateSession(db, user.id, null)
+    const app = await buildTestApp(db, (a) => registerUsersRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: null, role: 'viewer', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/users',
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(403)
+    await app.close()
+  })
+})
+
+describe('PUT /api/v1/users/:id/super-admin', () => {
+  it('promove um usuário e grava evento de auditoria: 200', async () => {
+    const { superAdmin, sessionId } = await seedSuperAdminSession()
+    const [target] = await db.insert(users).values({ email: 'a@acme.com', passwordHash: 'x' }).returning()
+    const app = await buildTestApp(db, (a) => registerUsersRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: superAdmin.id, org: null, role: 'super_admin', session: sessionId })
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/users/${target.id}/super-admin`,
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+      payload: { isSuperAdmin: true },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().isSuperAdmin).toBe(true)
+    const [event] = await db.select().from(auditEvents).where(eq(auditEvents.action, 'user.super_admin.grant'))
+    expect(event.target).toBe(target.id)
+    expect(event.actorId).toBe(superAdmin.id)
+    await app.close()
+  })
+
+  it('rejeita com 403 quando o requester não é super_admin', async () => {
+    const [user] = await db.insert(users).values({ email: 'a@acme.com', passwordHash: 'x' }).returning()
+    const [target] = await db.insert(users).values({ email: 'b@acme.com', passwordHash: 'x' }).returning()
+    const { sessionId } = await createOrRotateSession(db, user.id, null)
+    const app = await buildTestApp(db, (a) => registerUsersRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: null, role: 'viewer', session: sessionId })
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/users/${target.id}/super-admin`,
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+      payload: { isSuperAdmin: true },
+    })
+
+    expect(res.statusCode).toBe(403)
+    await app.close()
+  })
+})

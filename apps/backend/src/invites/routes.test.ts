@@ -46,6 +46,51 @@ describe('invites routes', () => {
     await app.close()
   })
 
+  it('GET /invites lista os convites pendentes da organização (owner/admin)', async () => {
+    const [org] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
+    const [owner] = await db.insert(users).values({ email: 'owner@acme.com', passwordHash: 'x' }).returning()
+    await db.insert(memberships).values({ userId: owner.id, organizationId: org.id, role: 'owner' })
+    await createInvite(db, org.id, 'pendente@acme.com', 'viewer')
+    const { sessionId } = await createOrRotateSession(db, owner.id, org.id)
+
+    const app = await buildTestApp(db, (a) => registerInvitesRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: owner.id, org: org.id, role: 'owner', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/invites',
+      headers: { host: 'acme.wz-hub.com' },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toHaveLength(1)
+    expect(res.json()[0].email).toBe('pendente@acme.com')
+    await app.close()
+  })
+
+  it('GET /invites rejeita com 403 quando o requester não é owner/admin', async () => {
+    const [org] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
+    const [viewer] = await db.insert(users).values({ email: 'viewer@acme.com', passwordHash: 'x' }).returning()
+    await db.insert(memberships).values({ userId: viewer.id, organizationId: org.id, role: 'viewer' })
+    const { sessionId } = await createOrRotateSession(db, viewer.id, org.id)
+
+    const app = await buildTestApp(db, (a) => registerInvitesRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: viewer.id, org: org.id, role: 'viewer', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/invites',
+      headers: { host: 'acme.wz-hub.com' },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(403)
+    await app.close()
+  })
+
   it('GET /invites/:token retorna o preview sem autenticação', async () => {
     const [org] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
     const { token } = await createInvite(db, org.id, 'novo@acme.com', 'viewer')

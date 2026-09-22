@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { sql, eq } from 'drizzle-orm'
 import { createDb, type Db } from '../../db/client.js'
-import { organizations, users, sessions } from '../../db/schema.js'
+import { organizations, users, sessions, auditEvents } from '../../db/schema.js'
 import { createOrRotateSession } from '../services/session.service.js'
 import { createTokenService } from '../services/token.service.js'
 import { stubEntitlementsResolver } from '../services/entitlements.service.js'
@@ -15,7 +15,7 @@ let pool: ReturnType<typeof createDb>['pool']
 
 beforeEach(async () => {
   ;({ db, pool } = createDb(env.DATABASE_URL))
-  await db.execute(sql`TRUNCATE TABLE organizations, users, sessions CASCADE`)
+  await db.execute(sql`TRUNCATE TABLE organizations, users, sessions, audit_events CASCADE`)
 })
 
 afterAll(async () => {
@@ -43,6 +43,28 @@ describe('POST /api/v1/auth/logout', () => {
     expect(res.statusCode).toBe(200)
     const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId))
     expect(session.revokedAt).not.toBeNull()
+    await app.close()
+  })
+
+  it('grava um evento de auditoria auth.logout', async () => {
+    const [org] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
+    const [user] = await db.insert(users).values({ email: 'a@acme.com', passwordHash: 'x' }).returning()
+    const { sessionId } = await createOrRotateSession(db, user.id, org.id)
+
+    const app = await buildTestApp(db, (a) => registerLogoutRoute(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: org.id, role: 'owner', session: sessionId })
+    const csrf = issueCsrfToken()
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: { 'x-csrf-token': csrf },
+      cookies: { access_token: access, csrf },
+    })
+
+    const [event] = await db.select().from(auditEvents).where(eq(auditEvents.actorId, user.id))
+    expect(event.action).toBe('auth.logout')
     await app.close()
   })
 

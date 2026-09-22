@@ -105,3 +105,15 @@ export class InviteEmailMismatchError extends AppError {
     super('invite-email-mismatch', 403, 'O convite foi emitido para outro e-mail')
   }
 }
+
+export class OrganizationNotFoundError extends AppError {
+  constructor() {
+    super('organization-not-found', 404, 'Organização não encontrada')
+  }
+}
+
+export class UserNotFoundError extends AppError {
+  constructor() {
+    super('user-not-found', 404, 'Usuário não encontrado')
+  }
+}

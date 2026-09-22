@@ -8,7 +8,7 @@ import { requireRole } from '../auth/hooks/require-role.js'
 import { createTokenService } from '../auth/services/token.service.js'
 import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { setAuthCookies } from '../auth/lib/set-auth-cookies.js'
-import { createInvite, previewInvite, acceptInvite } from './service.js'
+import { createInvite, previewInvite, acceptInvite, listInvites } from './service.js'
 import { NotAMemberError } from '../lib/errors.js'
 
 const RoleEnum = z.enum(['owner', 'admin', 'manager', 'operator', 'viewer'])
@@ -35,6 +35,13 @@ export async function registerInvitesRoutes(app: FastifyInstance, db: Db): Promi
       return reply.status(201).send({ token })
     }
   )
+
+  app.get('/api/v1/invites', { preHandler: [requireAuth, requireOwnerOrAdmin] }, async (request) => {
+    if (!request.tenant) {
+      throw new NotAMemberError()
+    }
+    return listInvites(db, request.tenant.id)
+  })
 
   app.get<{ Params: { token: string } }>('/api/v1/invites/:token', async (request) => {
     return previewInvite(db, request.params.token)

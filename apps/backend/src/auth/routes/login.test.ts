@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { sql, eq } from 'drizzle-orm'
 import { createDb, type Db } from '../../db/client.js'
-import { organizations, users, memberships } from '../../db/schema.js'
+import { organizations, users, memberships, auditEvents } from '../../db/schema.js'
 import { hashPassword } from '../services/password.service.js'
 import { registerLoginRoute } from './login.js'
 import { buildTestApp } from '../../test-utils/build-app.js'
@@ -12,7 +12,7 @@ let pool: ReturnType<typeof createDb>['pool']
 
 beforeEach(async () => {
   ;({ db, pool } = createDb(env.DATABASE_URL))
-  await db.execute(sql`TRUNCATE TABLE organizations, users, memberships CASCADE`)
+  await db.execute(sql`TRUNCATE TABLE organizations, users, memberships, audit_events CASCADE`)
 })
 
 afterAll(async () => {
@@ -112,6 +112,23 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().mfaChallenge).toBeTruthy()
     expect(res.cookies).toHaveLength(0)
+    await app.close()
+  })
+
+  it('grava um evento de auditoria auth.login ao logar com sucesso', async () => {
+    const { org, user } = await seedOrgOwner('Senha123!')
+    const app = await buildTestApp(db, (a) => registerLoginRoute(a, db))
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      headers: { host: 'acme.wz-hub.com' },
+      payload: { email: 'owner@acme.com', password: 'Senha123!' },
+    })
+
+    const [event] = await db.select().from(auditEvents).where(eq(auditEvents.actorId, user.id))
+    expect(event.action).toBe('auth.login')
+    expect(event.organizationId).toBe(org.id)
     await app.close()
   })
 

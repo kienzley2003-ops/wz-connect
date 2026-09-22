@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import type { Db } from '../../db/client.js'
 import { sessions, refreshTokens } from '../../db/schema.js'
 import { generateRefreshToken, hashRefreshToken } from '../lib/refresh-token.js'
@@ -47,6 +47,20 @@ export async function createOrRotateSession(
     },
     { isolationLevel: 'serializable' }
   )
+}
+
+export interface SessionRow {
+  id: string
+  organizationId: string | null
+  createdAt: Date
+}
+
+export async function listActiveSessions(db: Db, userId: string): Promise<SessionRow[]> {
+  return db
+    .select({ id: sessions.id, organizationId: sessions.organizationId, createdAt: sessions.createdAt })
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+    .orderBy(desc(sessions.createdAt))
 }
 
 export async function revokeSession(db: Db, sessionId: string): Promise<void> {

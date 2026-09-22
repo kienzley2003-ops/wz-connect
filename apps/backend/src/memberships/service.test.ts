@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { createDb, type Db } from '../db/client.js'
 import { organizations, users, memberships } from '../db/schema.js'
-import { listMemberships, createMembership, updateMembershipRole } from './service.js'
+import { listMemberships, createMembership, updateMembership } from './service.js'
 import { CrossOrgAccessError } from '../lib/errors.js'
 import { env } from '../env.js'
 
@@ -35,6 +35,12 @@ describe('listMemberships', () => {
     const rows = await listMemberships(db, orgA.id)
     expect(rows.map((r) => r.id)).toEqual([membershipA.id])
   })
+
+  it('inclui o e-mail do usuário via join', async () => {
+    const { orgA, userA } = await seedTwoOrgs()
+    const rows = await listMemberships(db, orgA.id)
+    expect(rows[0].email).toBe(userA.email)
+  })
 })
 
 describe('createMembership', () => {
@@ -49,16 +55,23 @@ describe('createMembership', () => {
   })
 })
 
-describe('updateMembershipRole', () => {
+describe('updateMembership', () => {
   it('atualiza o role quando a membership pertence à org informada', async () => {
     const { orgA, membershipA } = await seedTwoOrgs()
-    const updated = await updateMembershipRole(db, orgA.id, membershipA.id, 'admin')
+    const updated = await updateMembership(db, orgA.id, membershipA.id, { role: 'admin' })
     expect(updated.role).toBe('admin')
+  })
+
+  it('atualiza o status (ex.: suspender um membro)', async () => {
+    const { orgA, membershipA } = await seedTwoOrgs()
+    const updated = await updateMembership(db, orgA.id, membershipA.id, { status: 'suspended' })
+    expect(updated.status).toBe('suspended')
+    expect(updated.role).toBe('owner')
   })
 
   it('lança CrossOrgAccessError quando a membership pertence a outra org', async () => {
     const { orgB, membershipA } = await seedTwoOrgs()
-    await expect(updateMembershipRole(db, orgB.id, membershipA.id, 'admin')).rejects.toThrow(
+    await expect(updateMembership(db, orgB.id, membershipA.id, { role: 'admin' })).rejects.toThrow(
       CrossOrgAccessError
     )
   })

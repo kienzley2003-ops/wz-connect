@@ -4,12 +4,17 @@ import type { Db } from '../db/client.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { requireRole } from '../auth/hooks/require-role.js'
 import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
-import { listMemberships, createMembership, updateMembershipRole } from './service.js'
+import { listMemberships, createMembership, updateMembership } from './service.js'
 import { NotAMemberError } from '../lib/errors.js'
 
 const RoleEnum = z.enum(['owner', 'admin', 'manager', 'operator', 'viewer'])
+const StatusEnum = z.enum(['active', 'invited', 'suspended'])
 const CreateMembershipBody = z.object({ userId: z.string().uuid(), role: RoleEnum })
-const UpdateMembershipBody = z.object({ role: RoleEnum })
+const UpdateMembershipBody = z
+  .object({ role: RoleEnum.optional(), status: StatusEnum.optional() })
+  .refine((data) => data.role !== undefined || data.status !== undefined, {
+    message: 'Informe role ou status',
+  })
 
 export async function registerMembershipsRoutes(app: FastifyInstance, db: Db): Promise<void> {
   const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
@@ -49,7 +54,7 @@ export async function registerMembershipsRoutes(app: FastifyInstance, db: Db): P
       if (!parsed.success) {
         return reply.status(400).send({ error: { code: 'validation-error', message: 'Dados inválidos' } })
       }
-      const membership = await updateMembershipRole(db, request.tenant.id, request.params.id, parsed.data.role)
+      const membership = await updateMembership(db, request.tenant.id, request.params.id, parsed.data)
       return reply.send(membership)
     }
   )

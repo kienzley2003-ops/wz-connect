@@ -9,6 +9,7 @@ import { resolveRole, completeLogin } from '../services/login.service.js'
 import { createTokenService } from '../services/token.service.js'
 import { stubEntitlementsResolver } from '../services/entitlements.service.js'
 import { setAuthCookies } from '../lib/set-auth-cookies.js'
+import { logAuditEvent } from '../../audit/service.js'
 import { InvalidCredentialsError, LockedAccountError } from '../../lib/errors.js'
 
 const LoginBody = z.object({
@@ -66,6 +67,14 @@ export async function registerLoginRoute(app: FastifyInstance, db: Db): Promise<
 
       const role = await resolveRole(db, user.id, organizationId)
       const tokens = await completeLogin(db, tokenService, user.id, organizationId, role)
+      await logAuditEvent(db, {
+        organizationId,
+        actorId: user.id,
+        product: 'connect',
+        action: 'auth.login',
+        ip: request.ip,
+        userAgent: request.headers['user-agent'] as string | undefined,
+      })
       setAuthCookies(reply, tokens)
       return reply.send({ user: { id: user.id, email: user.email }, role })
     }

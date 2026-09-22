@@ -17,6 +17,8 @@ import {
   SlugTakenError,
   InviteInvalidError,
   InviteEmailMismatchError,
+  OrganizationNotFoundError,
+  UserNotFoundError,
 } from './errors.js'
 
 describe('AppError', () => {
@@ -117,5 +119,17 @@ describe('subclasses de AppError', () => {
     const err = new InviteEmailMismatchError()
     expect(err.code).toBe('invite-email-mismatch')
     expect(err.statusCode).toBe(403)
+  })
+
+  it('OrganizationNotFoundError usa status 404', () => {
+    const err = new OrganizationNotFoundError()
+    expect(err.code).toBe('organization-not-found')
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('UserNotFoundError usa status 404', () => {
+    const err = new UserNotFoundError()
+    expect(err.code).toBe('user-not-found')
+    expect(err.statusCode).toBe(404)
   })
 })

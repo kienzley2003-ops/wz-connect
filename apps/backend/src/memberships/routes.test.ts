@@ -104,4 +104,41 @@ describe('memberships routes', () => {
     expect(res.json().role).toBe('admin')
     await app.close()
   })
+
+  it('PUT /memberships/:id suspende um membro via status', async () => {
+    const { org, sessionId, user, membership } = await seedOwnerSession()
+    const app = await buildTestApp(db, (a) => registerMembershipsRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: org.id, role: 'owner', session: sessionId })
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/memberships/${membership.id}`,
+      headers: { host: 'acme.wz-hub.com' },
+      cookies: { access_token: access },
+      payload: { status: 'suspended' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().status).toBe('suspended')
+    await app.close()
+  })
+
+  it('PUT /memberships/:id rejeita com 400 sem role nem status', async () => {
+    const { org, sessionId, user, membership } = await seedOwnerSession()
+    const app = await buildTestApp(db, (a) => registerMembershipsRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: org.id, role: 'owner', session: sessionId })
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/memberships/${membership.id}`,
+      headers: { host: 'acme.wz-hub.com' },
+      cookies: { access_token: access },
+      payload: {},
+    })
+
+    expect(res.statusCode).toBe(400)
+    await app.close()
+  })
 })

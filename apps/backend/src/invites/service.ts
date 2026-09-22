@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Db } from '../db/client.js'
 import { invites, memberships, users, organizations, membershipRoleEnum } from '../db/schema.js'
 import { generateRefreshToken } from '../auth/lib/refresh-token.js'
@@ -56,6 +56,32 @@ export async function previewInvite(
     throw new InviteInvalidError()
   }
   return row
+}
+
+export interface InviteListRow {
+  id: string
+  email: string
+  role: string
+  expiresAt: Date
+  acceptedAt: Date | null
+  expired: boolean
+  createdAt: Date
+}
+
+export async function listInvites(db: Db, organizationId: string): Promise<InviteListRow[]> {
+  return db
+    .select({
+      id: invites.id,
+      email: invites.email,
+      role: invites.role,
+      expiresAt: invites.expiresAt,
+      acceptedAt: invites.acceptedAt,
+      expired: sql<boolean>`${invites.expiresAt} < now()`,
+      createdAt: invites.createdAt,
+    })
+    .from(invites)
+    .where(eq(invites.organizationId, organizationId))
+    .orderBy(desc(invites.createdAt))
 }
 
 export interface AcceptInviteInput {

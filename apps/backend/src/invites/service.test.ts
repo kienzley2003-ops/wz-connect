@@ -4,7 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import fastifyJwt from '@fastify/jwt'
 import { createDb, type Db } from '../db/client.js'
 import { organizations, users, memberships, invites } from '../db/schema.js'
-import { createInvite, previewInvite, acceptInvite } from './service.js'
+import { createInvite, previewInvite, acceptInvite, listInvites } from './service.js'
 import { createTokenService } from '../auth/services/token.service.js'
 import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { InviteInvalidError, InviteEmailMismatchError } from '../lib/errors.js'
@@ -71,6 +71,30 @@ describe('previewInvite', () => {
 
   it('lança InviteInvalidError para um token que não existe', async () => {
     await expect(previewInvite(db, 'token-inexistente')).rejects.toThrow(InviteInvalidError)
+  })
+})
+
+describe('listInvites', () => {
+  it('lista os convites da organização, mais recentes primeiro', async () => {
+    const org = await seedOrg()
+    await createInvite(db, org.id, 'primeiro@acme.com', 'viewer')
+    await createInvite(db, org.id, 'segundo@acme.com', 'admin')
+
+    const rows = await listInvites(db, org.id)
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0].email).toBe('segundo@acme.com')
+    expect(rows[0].expired).toBe(false)
+    expect(rows[0].acceptedAt).toBeNull()
+  })
+
+  it('não lista convites de outra organização', async () => {
+    const org = await seedOrg()
+    const [orgB] = await db.insert(organizations).values({ name: 'Beta', slug: 'beta' }).returning()
+    await createInvite(db, orgB.id, 'outro@beta.com', 'viewer')
+
+    const rows = await listInvites(db, org.id)
+    expect(rows).toHaveLength(0)
   })
 })
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { eq, isNull, and, sql } from 'drizzle-orm'
 import { createDb, type Db } from '../../db/client.js'
 import { organizations, users, sessions, refreshTokens } from '../../db/schema.js'
-import { createOrRotateSession, revokeSession, rotateRefreshToken } from './session.service.js'
+import { createOrRotateSession, revokeSession, rotateRefreshToken, listActiveSessions } from './session.service.js'
 import { hashRefreshToken } from '../lib/refresh-token.js'
 import { env } from '../../env.js'
 
@@ -87,6 +87,29 @@ describe('createOrRotateSession', () => {
       .from(sessions)
       .where(and(eq(sessions.userId, user.id), eq(sessions.organizationId, org.id), isNull(sessions.revokedAt)))
     expect(active).toHaveLength(1)
+  })
+})
+
+describe('listActiveSessions', () => {
+  it('lista só as sessões ativas do usuário, mais recentes primeiro', async () => {
+    const { org, user } = await seedUserAndOrg()
+    const hub = await createOrRotateSession(db, user.id, null)
+    const orgSession = await createOrRotateSession(db, user.id, org.id)
+
+    const rows = await listActiveSessions(db, user.id)
+
+    expect(rows.map((r) => r.id)).toEqual([orgSession.sessionId, hub.sessionId])
+  })
+
+  it('não lista sessões revogadas nem de outro usuário', async () => {
+    const { org, user } = await seedUserAndOrg()
+    const [otherUser] = await db.insert(users).values({ email: 'b@acme.com', passwordHash: 'x' }).returning()
+    const { sessionId: revokedId } = await createOrRotateSession(db, user.id, org.id)
+    await revokeSession(db, revokedId)
+    await createOrRotateSession(db, otherUser.id, org.id)
+
+    const rows = await listActiveSessions(db, user.id)
+    expect(rows).toHaveLength(0)
   })
 })
 

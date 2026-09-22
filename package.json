@@ -5,6 +5,10 @@
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
+    "infra:up": "podman compose -f docker-compose.yml up -d",
+    "infra:down": "podman compose -f docker-compose.yml down",
+    "infra:status": "podman compose -f docker-compose.yml ps",
+    "infra:logs": "podman compose -f docker-compose.yml logs --tail=100",
     "dev": "pnpm --parallel -r dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",

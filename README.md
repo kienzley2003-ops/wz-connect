@@ -8,7 +8,7 @@ Auth + Tenancy + Catálogo/Planos do wz-hub. Ver `PRODUCT.md` para o documento v
 - **Worker:** BullMQ + Redis (NF-e, retry de webhook — ver ADR 0011)
 - **Frontend:** React 19, TypeScript 5, Vite 6, TailwindCSS 4
 - **Design system:** `@wz/ui`, extraído do `wz-agente` (ver `docs/design-system.md`)
-- **Infra:** Docker Compose (Postgres + Redis), pnpm workspaces 9.x
+- **Infra local:** Podman + Compose (Postgres + Redis), pnpm workspaces 9.x
 - **Testes:** Vitest 2.x (≥85% cobertura, mesma política do wz-masterfila/wz-agente)
 
 ## Estrutura
@@ -34,8 +34,24 @@ wz-connect/
 
 ### Pré-requisitos
 
-- Docker Desktop (para Postgres + Redis locais)
-- Node.js 20 LTS + pnpm 9.x
+- Podman com uma máquina WSL 2 iniciada e um provider Compose instalado (para Postgres + Redis locais).
+- Node.js 22 LTS + pnpm 9.15.0.
+
+No Windows, instale `Microsoft.WSL`, `RedHat.Podman`, `RedHat.Podman-Desktop`
+e `Docker.DockerCompose` via winget. O último pacote é somente o provider
+Compose, não o Docker Desktop. A instalação do WSL/Podman pode exigir
+privilégios de administrador e reinicialização do Windows.
+
+Após instalar, abra um novo PowerShell e prepare a máquina uma única vez:
+
+```powershell
+podman machine init
+podman machine start
+podman info
+podman compose version
+```
+
+Nas próximas sessões, use `podman machine start` se a máquina estiver parada.
 
 ```bash
 corepack enable && corepack prepare pnpm@9.15.0 --activate
@@ -52,7 +68,7 @@ cp .env.example .env
 # Editar .env se necessário (valores padrão já funcionam em dev local)
 
 # 3. Subir Postgres + Redis
-docker compose up -d
+pnpm infra:up
 
 # 4. Aplicar a primeira migration
 pnpm --filter @wz/connect-backend db:migrate
@@ -73,6 +89,9 @@ pnpm build              # build de todos os workspaces
 pnpm test                # testes de todos os workspaces
 pnpm test:coverage       # cobertura ≥85%
 pnpm lint                # lint de todos os workspaces
+pnpm infra:status        # estado de Postgres e Redis no Podman
+pnpm infra:logs          # logs recentes dos serviços
+pnpm infra:down          # para os serviços, preservando o volume do banco
 pnpm --filter @wz/connect-backend db:generate  # gera nova migration a partir do schema.ts
 pnpm --filter @wz/connect-backend db:migrate   # aplica migrations pendentes
 ```

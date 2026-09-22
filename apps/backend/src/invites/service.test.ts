@@ -66,7 +66,12 @@ describe('previewInvite', () => {
     const org = await seedOrg()
     const { token } = await createInvite(db, org.id, 'novo@acme.com', 'viewer')
     const preview = await previewInvite(db, token)
-    expect(preview).toEqual({ organizationName: 'Acme', role: 'viewer', expired: false })
+    expect(preview).toEqual({
+      organizationName: 'Acme',
+      organizationSlug: 'acme',
+      role: 'viewer',
+      expired: false,
+    })
   })
 
   it('lança InviteInvalidError para um token que não existe', async () => {

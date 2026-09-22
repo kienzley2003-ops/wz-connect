@@ -41,10 +41,11 @@ export async function createInvite(
 export async function previewInvite(
   db: Db,
   token: string
-): Promise<{ organizationName: string; role: string; expired: boolean }> {
+): Promise<{ organizationName: string; organizationSlug: string; role: string; expired: boolean }> {
   const [row] = await db
     .select({
       organizationName: organizations.name,
+      organizationSlug: organizations.slug,
       role: invites.role,
       expired: sql<boolean>`${invites.expiresAt} < now()`,
     })

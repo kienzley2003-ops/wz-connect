@@ -103,7 +103,12 @@ describe('invites routes', () => {
     })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ organizationName: 'Acme', role: 'viewer', expired: false })
+    expect(res.json()).toEqual({
+      organizationName: 'Acme',
+      organizationSlug: 'acme',
+      role: 'viewer',
+      expired: false,
+    })
     await app.close()
   })
 

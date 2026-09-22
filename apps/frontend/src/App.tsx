@@ -4,6 +4,7 @@ import { useAuth } from './lib/auth-context.js'
 import { RequireAuth } from './routes/RequireAuth.js'
 import { LoginPage } from './routes/LoginPage.js'
 import { OnboardingPage } from './routes/OnboardingPage.js'
+import { AcceptInvitePage } from './routes/AcceptInvitePage.js'
 import { OrgUsersPage } from './routes/org/UsersPage.js'
 import { OrgInvitesPage } from './routes/org/InvitesPage.js'
 import { ProfilePage } from './routes/org/ProfilePage.js'
@@ -16,6 +17,7 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/invite/:token" element={<AcceptInvitePage />} />
       <Route
         path="/app/*"
         element={

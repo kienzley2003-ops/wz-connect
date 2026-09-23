@@ -22,6 +22,8 @@ import { registerImpersonationRoutes } from './impersonation/routes.js'
 import { registerOrganizationsRoutes } from './organizations/routes.js'
 import { registerUsersRoutes } from './users/routes.js'
 import { registerSessionsRoutes } from './sessions/routes.js'
+import { registerProductsRoutes } from './products/routes.js'
+import { registerPlansRoutes } from './plans/routes.js'
 import { AppError } from './lib/errors.js'
 
 const API = '/api/v1'
@@ -111,6 +113,8 @@ await registerImpersonationRoutes(app, db)
 await registerOrganizationsRoutes(app, db)
 await registerUsersRoutes(app, db)
 await registerSessionsRoutes(app, db)
+await registerProductsRoutes(app, db)
+await registerPlansRoutes(app, db)
 
 const port = env.PORT
 app.listen({ port, host: '0.0.0.0' }).catch((err) => {

@@ -19,6 +19,10 @@ import {
   InviteEmailMismatchError,
   OrganizationNotFoundError,
   UserNotFoundError,
+  ProductKeyTakenError,
+  ProductNotFoundError,
+  PlanKeyTakenError,
+  PlanNotFoundError,
 } from './errors.js'
 
 describe('AppError', () => {
@@ -130,6 +134,30 @@ describe('subclasses de AppError', () => {
   it('UserNotFoundError usa status 404', () => {
     const err = new UserNotFoundError()
     expect(err.code).toBe('user-not-found')
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('ProductKeyTakenError usa status 409', () => {
+    const err = new ProductKeyTakenError()
+    expect(err.code).toBe('product-key-taken')
+    expect(err.statusCode).toBe(409)
+  })
+
+  it('ProductNotFoundError usa status 404', () => {
+    const err = new ProductNotFoundError()
+    expect(err.code).toBe('product-not-found')
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('PlanKeyTakenError usa status 409', () => {
+    const err = new PlanKeyTakenError()
+    expect(err.code).toBe('plan-key-taken')
+    expect(err.statusCode).toBe(409)
+  })
+
+  it('PlanNotFoundError usa status 404', () => {
+    const err = new PlanNotFoundError()
+    expect(err.code).toBe('plan-not-found')
     expect(err.statusCode).toBe(404)
   })
 })

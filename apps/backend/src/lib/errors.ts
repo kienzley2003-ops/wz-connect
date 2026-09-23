@@ -117,3 +117,27 @@ export class UserNotFoundError extends AppError {
     super('user-not-found', 404, 'Usuário não encontrado')
   }
 }
+
+export class ProductKeyTakenError extends AppError {
+  constructor() {
+    super('product-key-taken', 409, 'Já existe um produto com essa key')
+  }
+}
+
+export class ProductNotFoundError extends AppError {
+  constructor() {
+    super('product-not-found', 404, 'Produto não encontrado')
+  }
+}
+
+export class PlanKeyTakenError extends AppError {
+  constructor() {
+    super('plan-key-taken', 409, 'Já existe um plano com essa key')
+  }
+}
+
+export class PlanNotFoundError extends AppError {
+  constructor() {
+    super('plan-not-found', 404, 'Plano não encontrado')
+  }
+}

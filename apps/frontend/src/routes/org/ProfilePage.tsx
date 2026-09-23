@@ -27,6 +27,7 @@ export function ProfilePage() {
       const rows = await apiFetch<Session[]>('/sessions')
       setSessions(rows)
     } catch {
+      setSessions([])
       show({ type: 'danger', title: 'Erro ao carregar sessões' })
     }
   }

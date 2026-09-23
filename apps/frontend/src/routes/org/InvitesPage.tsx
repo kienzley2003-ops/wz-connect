@@ -26,7 +26,10 @@ export function OrgInvitesPage() {
   useEffect(() => {
     apiFetch<Invite[]>('/invites')
       .then(setInvites)
-      .catch(() => show({ type: 'danger', title: 'Erro ao carregar convites' }))
+      .catch(() => {
+        setInvites([])
+        show({ type: 'danger', title: 'Erro ao carregar convites' })
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

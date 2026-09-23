@@ -19,7 +19,10 @@ export function HubOrganizationsPage() {
   useEffect(() => {
     apiFetch<Organization[]>('/organizations')
       .then(setOrgs)
-      .catch(() => show({ type: 'danger', title: 'Erro ao carregar organizações' }))
+      .catch(() => {
+        setOrgs([])
+        show({ type: 'danger', title: 'Erro ao carregar organizações' })
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

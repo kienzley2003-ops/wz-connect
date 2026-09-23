@@ -19,6 +19,7 @@ export function HubUsersPage() {
       const rows = await apiFetch<HubUser[]>('/users')
       setUsers(rows)
     } catch {
+      setUsers([])
       show({ type: 'danger', title: 'Erro ao carregar usuários' })
     }
   }

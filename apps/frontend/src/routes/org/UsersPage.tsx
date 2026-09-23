@@ -32,6 +32,7 @@ export function OrgUsersPage() {
       const data = await apiFetch<Membership[]>('/memberships')
       setMembers(data)
     } catch {
+      setMembers([])
       show({ type: 'danger', title: 'Erro ao carregar usuários' })
     }
   }

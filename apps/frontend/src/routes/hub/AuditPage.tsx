@@ -20,7 +20,10 @@ export function HubAuditPage() {
   useEffect(() => {
     apiFetch<AuditEvent[]>('/audit-events')
       .then(setEvents)
-      .catch(() => show({ type: 'danger', title: 'Erro ao carregar auditoria' }))
+      .catch(() => {
+        setEvents([])
+        show({ type: 'danger', title: 'Erro ao carregar auditoria' })
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -9,6 +9,7 @@ import { OrgUsersPage } from './routes/org/UsersPage.js'
 import { OrgInvitesPage } from './routes/org/InvitesPage.js'
 import { ProfilePage } from './routes/org/ProfilePage.js'
 import { SubscriptionPage } from './routes/org/SubscriptionPage.js'
+import { HubDashboardPage } from './routes/hub/DashboardPage.js'
 import { HubOrganizationsPage } from './routes/hub/OrganizationsPage.js'
 import { HubUsersPage } from './routes/hub/UsersPage.js'
 import { HubAuditPage } from './routes/hub/AuditPage.js'
@@ -97,6 +98,7 @@ function HubShell() {
         {
           label: 'Plataforma',
           links: [
+            { to: '/hub/dashboard', icon: '📊', label: 'Dashboard' },
             { to: '/hub/organizations', icon: '🏢', label: 'Organizações' },
             { to: '/hub/users', icon: '👥', label: 'Usuários globais' },
             { to: '/hub/products', icon: '📦', label: 'Produtos' },
@@ -112,13 +114,14 @@ function HubShell() {
       isActive={(to) => location.pathname.startsWith(to)}
     >
       <Routes>
+        <Route path="dashboard" element={<HubDashboardPage />} />
         <Route path="organizations" element={<HubOrganizationsPage />} />
         <Route path="users" element={<HubUsersPage />} />
         <Route path="products" element={<HubProductsPage />} />
         <Route path="plans" element={<HubPlansPage />} />
         <Route path="feature-flags" element={<HubFeatureFlagsPage />} />
         <Route path="audit" element={<HubAuditPage />} />
-        <Route path="*" element={<Navigate to="/hub/organizations" replace />} />
+        <Route path="*" element={<Navigate to="/hub/dashboard" replace />} />
       </Routes>
     </AppShell>
   )

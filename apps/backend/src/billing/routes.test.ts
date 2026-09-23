@@ -91,3 +91,73 @@ describe('GET /api/v1/billing/subscription', () => {
     await app.close()
   })
 })
+
+describe('GET /api/v1/billing/dashboard', () => {
+  it('agrega orgs, assinaturas ativas e MRR (planos mensais e anuais): 200', async () => {
+    const [orgA] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
+    const [orgB] = await db.insert(organizations).values({ name: 'Beta', slug: 'beta' }).returning()
+    const [monthly] = await db
+      .insert(plans)
+      .values({ key: 'pro', name: 'Pro', priceCents: 9900, billingInterval: 'month' })
+      .returning()
+    const [yearly] = await db
+      .insert(plans)
+      .values({ key: 'pro-anual', name: 'Pro Anual', priceCents: 120000, billingInterval: 'year' })
+      .returning()
+    await db.insert(subscriptions).values({
+      organizationId: orgA.id,
+      planId: monthly.id,
+      stripeSubscriptionId: 'sub_a',
+      status: 'active',
+    })
+    await db.insert(subscriptions).values({
+      organizationId: orgB.id,
+      planId: yearly.id,
+      stripeSubscriptionId: 'sub_b',
+      status: 'trialing',
+    })
+    const [admin] = await db
+      .insert(users)
+      .values({ email: 'root@wz.com', passwordHash: 'x', isSuperAdmin: true })
+      .returning()
+    const { sessionId } = await createOrRotateSession(db, admin.id, null)
+    const app = await buildTestApp(db, (a) => registerBillingRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: admin.id, org: null, role: 'super_admin', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/billing/dashboard',
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({
+      totalOrganizations: 2,
+      activeSubscriptions: 2,
+      mrrCents: 9900 + 10000, // 9900 (mensal) + 120000/12 (anual rateado)
+      newSignupsLast30Days: 2,
+    })
+    await app.close()
+  })
+
+  it('rejeita quem não é super_admin: 403', async () => {
+    const [org] = await db.insert(organizations).values({ name: 'Acme', slug: 'acme' }).returning()
+    const [user] = await db.insert(users).values({ email: 'a@acme.com', passwordHash: 'x' }).returning()
+    const { sessionId } = await createOrRotateSession(db, user.id, org.id)
+    const app = await buildTestApp(db, (a) => registerBillingRoutes(a, db))
+    const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+    const access = await tokenService.signAccess({ sub: user.id, org: org.id, role: 'owner', session: sessionId })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/billing/dashboard',
+      headers: { host: env.BASE_DOMAIN },
+      cookies: { access_token: access },
+    })
+
+    expect(res.statusCode).toBe(403)
+    await app.close()
+  })
+})

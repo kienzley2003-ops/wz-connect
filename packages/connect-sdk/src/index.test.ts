@@ -64,6 +64,16 @@ describe('createConnectClient — auth.refresh e audit.log', () => {
         res.end(JSON.stringify({ id: 'event-1' }))
         return
       }
+      if (req.url?.startsWith('/api/v1/entitlements/check')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ allowed: true }))
+        return
+      }
+      if (req.url?.startsWith('/api/v1/entitlements')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ planId: 'plan-1', products: ['masterfila'] }))
+        return
+      }
       res.writeHead(404)
       res.end()
     })
@@ -94,5 +104,18 @@ describe('createConnectClient — auth.refresh e audit.log', () => {
     await expect(
       client.audit.log('access-valido', { product: 'connect', action: 'x' })
     ).resolves.toBeUndefined()
+  })
+
+  it('entitlements.getActiveEntitlements chama o backend configurado', async () => {
+    const client = createConnectClient({ baseUrl, jwtSecret: SECRET })
+    await expect(client.entitlements.getActiveEntitlements('access-valido', 'org-1')).resolves.toEqual({
+      planId: 'plan-1',
+      products: ['masterfila'],
+    })
+  })
+
+  it('entitlements.check chama o backend configurado', async () => {
+    const client = createConnectClient({ baseUrl, jwtSecret: SECRET })
+    await expect(client.entitlements.check('access-valido', 'org-1', 'masterfila')).resolves.toBe(true)
   })
 })

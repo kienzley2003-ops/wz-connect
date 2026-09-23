@@ -2,18 +2,25 @@
 // (substitui o tarball vendor de wz-masterfila/vendor/wz-connect-sdk-0.2.0.tgz
 // — ver ADR 0002).
 //
-// Cobre a parte de Auth do contrato (Frente A): verificação local de
-// token, refresh de sessão e auditoria central. A parte de Billing
-// (connect.entitlements.*) é da Frente B, ainda não iniciada.
+// Cobre Auth (Frente A: verificação local de token, refresh de sessão,
+// auditoria central) e Billing (Frente B: connect.entitlements.*, ver
+// ADR 0005) do contrato do SDK.
 
 export { verifyAccessToken, type AccessTokenPayload } from './jwt.js'
 export { logAuditEvent, type AuditLogEvent, type AuditLogParams } from './audit.js'
 export { refreshSession, type RefreshParams, type RefreshResult } from './refresh.js'
+export {
+  getActiveEntitlements,
+  checkEntitlement,
+  type EntitlementsResult,
+  type CheckEntitlementParams,
+} from './entitlements.js'
 export { ConnectApiError, InvalidTokenError, TokenExpiredError } from './errors.js'
 
 import { verifyAccessToken, type AccessTokenPayload } from './jwt.js'
 import { logAuditEvent, type AuditLogEvent } from './audit.js'
 import { refreshSession, type RefreshResult } from './refresh.js'
+import { getActiveEntitlements, checkEntitlement, type EntitlementsResult } from './entitlements.js'
 
 export interface ConnectClientConfig {
   /** URL base do backend do wz-connect, ex.: http://localhost:3000 */
@@ -30,6 +37,10 @@ export interface ConnectClient {
   audit: {
     log(accessToken: string, event: AuditLogEvent): Promise<void>
   }
+  entitlements: {
+    getActiveEntitlements(accessToken: string, organizationId: string): Promise<EntitlementsResult>
+    check(accessToken: string, organizationId: string, product: string): Promise<boolean>
+  }
 }
 
 export function createConnectClient(config: ConnectClientConfig): ConnectClient {
@@ -41,6 +52,12 @@ export function createConnectClient(config: ConnectClientConfig): ConnectClient 
     },
     audit: {
       log: (accessToken, event) => logAuditEvent({ baseUrl: config.baseUrl, accessToken, event }),
+    },
+    entitlements: {
+      getActiveEntitlements: (accessToken, organizationId) =>
+        getActiveEntitlements({ baseUrl: config.baseUrl, accessToken, organizationId }),
+      check: (accessToken, organizationId, product) =>
+        checkEntitlement({ baseUrl: config.baseUrl, accessToken, organizationId, product }),
     },
   }
 }

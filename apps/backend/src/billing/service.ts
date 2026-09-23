@@ -1,6 +1,8 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { Db } from '../db/client.js'
-import { subscriptions, plans, subscriptionStatusEnum, billingIntervalEnum } from '../db/schema.js'
+import { organizations, subscriptions, plans, subscriptionStatusEnum, billingIntervalEnum } from '../db/schema.js'
+
+const ENTITLED_STATUSES: (typeof subscriptionStatusEnum.enumValues)[number][] = ['trialing', 'active', 'past_due']
 
 export type SubscriptionStatus = (typeof subscriptionStatusEnum.enumValues)[number]
 export type BillingInterval = (typeof billingIntervalEnum.enumValues)[number]
@@ -39,4 +41,42 @@ export async function getCurrentSubscription(db: Db, organizationId: string): Pr
     .orderBy(desc(subscriptions.createdAt))
     .limit(1)
   return row ?? null
+}
+
+export interface DashboardSummary {
+  totalOrganizations: number
+  activeSubscriptions: number
+  mrrCents: number
+  newSignupsLast30Days: number
+}
+
+/** Dashboard global do Hub Admin — agrega direto no banco, sem cache;
+ * volume esperado (dezenas/centenas de orgs) não justifica um job. */
+export async function getDashboardSummary(db: Db): Promise<DashboardSummary> {
+  const [{ totalOrganizations }] = await db
+    .select({ totalOrganizations: sql<number>`count(*)::int` })
+    .from(organizations)
+
+  const activeSubs = await db
+    .select({ priceCents: plans.priceCents, billingInterval: plans.billingInterval })
+    .from(subscriptions)
+    .innerJoin(plans, eq(subscriptions.planId, plans.id))
+    .where(inArray(subscriptions.status, ENTITLED_STATUSES))
+
+  const mrrCents = activeSubs.reduce(
+    (sum, s) => sum + (s.billingInterval === 'year' ? Math.round(s.priceCents / 12) : s.priceCents),
+    0
+  )
+
+  const [{ newSignupsLast30Days }] = await db
+    .select({ newSignupsLast30Days: sql<number>`count(*)::int` })
+    .from(organizations)
+    .where(gte(organizations.createdAt, sql`now() - interval '30 days'`))
+
+  return {
+    totalOrganizations,
+    activeSubscriptions: activeSubs.length,
+    mrrCents,
+    newSignupsLast30Days,
+  }
 }

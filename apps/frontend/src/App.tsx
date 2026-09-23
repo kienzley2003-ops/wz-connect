@@ -8,9 +8,13 @@ import { AcceptInvitePage } from './routes/AcceptInvitePage.js'
 import { OrgUsersPage } from './routes/org/UsersPage.js'
 import { OrgInvitesPage } from './routes/org/InvitesPage.js'
 import { ProfilePage } from './routes/org/ProfilePage.js'
+import { SubscriptionPage } from './routes/org/SubscriptionPage.js'
 import { HubOrganizationsPage } from './routes/hub/OrganizationsPage.js'
 import { HubUsersPage } from './routes/hub/UsersPage.js'
 import { HubAuditPage } from './routes/hub/AuditPage.js'
+import { HubProductsPage } from './routes/hub/ProductsPage.js'
+import { HubPlansPage } from './routes/hub/PlansPage.js'
+import { HubFeatureFlagsPage } from './routes/hub/FeatureFlagsPage.js'
 
 export function App() {
   return (
@@ -61,6 +65,7 @@ function OrgShell() {
           links: [
             { to: '/app/users', icon: '👥', label: 'Usuários' },
             { to: '/app/invites', icon: '✉️', label: 'Convites' },
+            { to: '/app/subscription', icon: '💳', label: 'Assinatura' },
             { to: '/app/profile', icon: '⚙️', label: 'Perfil' },
           ],
         },
@@ -73,6 +78,7 @@ function OrgShell() {
       <Routes>
         <Route path="users" element={<OrgUsersPage />} />
         <Route path="invites" element={<OrgInvitesPage />} />
+        <Route path="subscription" element={<SubscriptionPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/app/users" replace />} />
       </Routes>
@@ -93,6 +99,9 @@ function HubShell() {
           links: [
             { to: '/hub/organizations', icon: '🏢', label: 'Organizações' },
             { to: '/hub/users', icon: '👥', label: 'Usuários globais' },
+            { to: '/hub/products', icon: '📦', label: 'Produtos' },
+            { to: '/hub/plans', icon: '💳', label: 'Planos' },
+            { to: '/hub/feature-flags', icon: '🚩', label: 'Feature flags' },
             { to: '/hub/audit', icon: '📋', label: 'Auditoria' },
           ],
         },
@@ -105,6 +114,9 @@ function HubShell() {
       <Routes>
         <Route path="organizations" element={<HubOrganizationsPage />} />
         <Route path="users" element={<HubUsersPage />} />
+        <Route path="products" element={<HubProductsPage />} />
+        <Route path="plans" element={<HubPlansPage />} />
+        <Route path="feature-flags" element={<HubFeatureFlagsPage />} />
         <Route path="audit" element={<HubAuditPage />} />
         <Route path="*" element={<Navigate to="/hub/organizations" replace />} />
       </Routes>

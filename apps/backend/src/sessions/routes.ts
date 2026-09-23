@@ -4,14 +4,14 @@ import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { sessions } from '../db/schema.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { listActiveSessions, revokeSession } from '../auth/services/session.service.js'
 import { AppError } from '../lib/errors.js'
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
 
 export async function registerSessionsRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
 
   app.get('/api/v1/sessions', { preHandler: requireAuth }, async (request) => {
     return listActiveSessions(db, request.authUser.sub)

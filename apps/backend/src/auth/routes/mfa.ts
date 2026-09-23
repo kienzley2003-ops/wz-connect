@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import type { Db } from '../../db/client.js'
 import { users } from '../../db/schema.js'
 import { createRequireAuth } from '../hooks/require-auth.js'
-import { stubEntitlementsResolver } from '../services/entitlements.service.js'
+import { createEntitlementsResolver } from '../services/entitlements.service.js'
 import { setupMfa, verifyMfaCode, encryptMfaSecret, decryptMfaSecret } from '../services/mfa.service.js'
 import { MfaInvalidError, MfaNotEnrolledError } from '../../lib/errors.js'
 import { env } from '../../env.js'
@@ -13,7 +13,7 @@ const EnableBody = z.object({ secret: z.string(), code: z.string().length(6) })
 const DisableBody = z.object({ code: z.string().length(6) })
 
 export async function registerMfaRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
 
   app.get('/api/v1/mfa/setup', { preHandler: requireAuth }, async (request) => {
     const [user] = await db.select().from(users).where(eq(users.id, request.authUser.sub)).limit(1)

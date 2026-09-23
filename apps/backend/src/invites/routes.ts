@@ -6,7 +6,7 @@ import { users } from '../db/schema.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { requireRole } from '../auth/hooks/require-role.js'
 import { createTokenService } from '../auth/services/token.service.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { setAuthCookies } from '../auth/lib/set-auth-cookies.js'
 import { createInvite, previewInvite, acceptInvite, listInvites } from './service.js'
 import { NotAMemberError } from '../lib/errors.js'
@@ -16,9 +16,9 @@ const CreateInviteBody = z.object({ email: z.string().email(), role: RoleEnum })
 const AcceptInviteBody = z.object({ password: z.string().min(8).optional() })
 
 export async function registerInvitesRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
   const requireOwnerOrAdmin = requireRole('owner', 'admin')
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post(
     '/api/v1/invites',

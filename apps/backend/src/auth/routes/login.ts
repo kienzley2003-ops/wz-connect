@@ -7,7 +7,7 @@ import { verifyPassword } from '../services/password.service.js'
 import { isLocked, recordFailure, recordSuccess } from '../services/lockout.service.js'
 import { resolveRole, completeLogin } from '../services/login.service.js'
 import { createTokenService } from '../services/token.service.js'
-import { stubEntitlementsResolver } from '../services/entitlements.service.js'
+import { createEntitlementsResolver } from '../services/entitlements.service.js'
 import { setAuthCookies } from '../lib/set-auth-cookies.js'
 import { logAuditEvent } from '../../audit/service.js'
 import { InvalidCredentialsError, LockedAccountError } from '../../lib/errors.js'
@@ -18,7 +18,7 @@ const LoginBody = z.object({
 })
 
 export async function registerLoginRoute(app: FastifyInstance, db: Db): Promise<void> {
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post(
     '/api/v1/auth/login',

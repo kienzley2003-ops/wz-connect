@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { createTokenService } from '../auth/services/token.service.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { setAuthCookies } from '../auth/lib/set-auth-cookies.js'
 import { impersonateOrganization } from './service.js'
 import { ImpersonationForbiddenError } from '../lib/errors.js'
@@ -11,8 +11,8 @@ import { ImpersonationForbiddenError } from '../lib/errors.js'
 const ParamsSchema = z.object({ organizationId: z.string().uuid() })
 
 export async function registerImpersonationRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post<{ Params: { organizationId: string } }>(
     '/api/v1/impersonate/:organizationId',

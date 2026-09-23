@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { requireRole } from '../auth/hooks/require-role.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { listMemberships, createMembership, updateMembership } from './service.js'
 import { NotAMemberError } from '../lib/errors.js'
 
@@ -17,7 +17,7 @@ const UpdateMembershipBody = z
   })
 
 export async function registerMembershipsRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
   const requireOwnerOrAdmin = requireRole('owner', 'admin')
 
   app.get('/api/v1/memberships', { preHandler: requireAuth }, async (request) => {

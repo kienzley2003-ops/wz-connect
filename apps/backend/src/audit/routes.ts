@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { requireRole } from '../auth/hooks/require-role.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { logAuditEvent, listAuditEvents } from './service.js'
 import { NotAMemberError } from '../lib/errors.js'
 
@@ -26,7 +26,7 @@ const ListEventsQuery = z.object({
 })
 
 export async function registerAuditRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
   const requireHubOrOrgAdmin = requireRole('super_admin', 'owner', 'admin')
 
   app.post('/api/v1/audit', { preHandler: requireAuth }, async (request, reply) => {

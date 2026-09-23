@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { createTokenService } from '../auth/services/token.service.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { setAuthCookies } from '../auth/lib/set-auth-cookies.js'
 import { onboardOrganization } from './service.js'
 
@@ -19,7 +19,7 @@ const OnboardBody = z.object({
 })
 
 export async function registerOnboardingRoute(app: FastifyInstance, db: Db): Promise<void> {
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post('/api/v1/onboarding/organization', async (request, reply) => {
     const parsed = OnboardBody.safeParse(request.body)

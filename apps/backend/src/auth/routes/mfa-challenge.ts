@@ -6,7 +6,7 @@ import { users } from '../../db/schema.js'
 import { decryptMfaSecret, verifyMfaCode } from '../services/mfa.service.js'
 import { resolveRole, completeLogin } from '../services/login.service.js'
 import { createTokenService } from '../services/token.service.js'
-import { stubEntitlementsResolver } from '../services/entitlements.service.js'
+import { createEntitlementsResolver } from '../services/entitlements.service.js'
 import { setAuthCookies } from '../lib/set-auth-cookies.js'
 import { UnauthenticatedError, MfaNotEnrolledError, MfaInvalidError } from '../../lib/errors.js'
 import { env } from '../../env.js'
@@ -23,7 +23,7 @@ interface MfaChallengePayload {
 }
 
 export async function registerMfaChallengeRoute(app: FastifyInstance, db: Db): Promise<void> {
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post('/api/v1/auth/mfa', async (request, reply) => {
     const parsed = MfaChallengeBody.safeParse(request.body)

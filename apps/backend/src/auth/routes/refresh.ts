@@ -6,7 +6,7 @@ import { hashRefreshToken } from '../lib/refresh-token.js'
 import { revokeSession, rotateRefreshToken } from '../services/session.service.js'
 import { resolveRole } from '../services/login.service.js'
 import { createTokenService } from '../services/token.service.js'
-import { stubEntitlementsResolver } from '../services/entitlements.service.js'
+import { createEntitlementsResolver } from '../services/entitlements.service.js'
 import { setAuthCookies } from '../lib/set-auth-cookies.js'
 import { verifyCsrfToken } from '../services/csrf.service.js'
 import { CsrfMismatchError, UnauthenticatedError, SessionRevokedError } from '../../lib/errors.js'
@@ -14,7 +14,7 @@ import { CsrfMismatchError, UnauthenticatedError, SessionRevokedError } from '..
 const REPLAY_WINDOW_SECONDS = 5
 
 export async function registerRefreshRoute(app: FastifyInstance, db: Db): Promise<void> {
-  const tokenService = createTokenService(app.jwt, stubEntitlementsResolver)
+  const tokenService = createTokenService(app.jwt, createEntitlementsResolver(db))
 
   app.post('/api/v1/auth/refresh', async (request, reply) => {
     if (!verifyCsrfToken(request.headers['x-csrf-token'] as string | undefined, request.cookies.csrf)) {

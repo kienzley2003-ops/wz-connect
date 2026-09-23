@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Db } from '../db/client.js'
 import { createRequireAuth } from '../auth/hooks/require-auth.js'
 import { requireRole } from '../auth/hooks/require-role.js'
-import { stubEntitlementsResolver } from '../auth/services/entitlements.service.js'
+import { createEntitlementsResolver } from '../auth/services/entitlements.service.js'
 import { listUsers, setSuperAdmin } from './service.js'
 import { logAuditEvent } from '../audit/service.js'
 
@@ -11,7 +11,7 @@ const ParamsSchema = z.object({ id: z.string().uuid() })
 const SetSuperAdminBody = z.object({ isSuperAdmin: z.boolean() })
 
 export async function registerUsersRoutes(app: FastifyInstance, db: Db): Promise<void> {
-  const requireAuth = createRequireAuth(db, app.jwt, stubEntitlementsResolver)
+  const requireAuth = createRequireAuth(db, app.jwt, createEntitlementsResolver(db))
   const requireSuperAdmin = requireRole('super_admin')
 
   app.get('/api/v1/users', { preHandler: [requireAuth, requireSuperAdmin] }, async () => {
